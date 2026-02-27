@@ -17,7 +17,7 @@ In rural Haryana, learners face significant accessibility barriers due to the re
 
 This project proposes an end-to-end generative pipeline to translate Standard Hindi text into Bangru and synthesize it into natural, dialect-authentic speech. To bridge textual gaps, the methodology employs rule-constrained synthetic data augmentation and parameter-efficient fine-tuning (QLoRA) on Llama-3.1 to model systematic structural shifts, such as auxiliary and negation transformations, without semantic drift. For speech synthesis, the architecture utilizes VITS, leveraging transfer learning from AI4Bharat Indic checkpoints to overcome the limitations of a 5-hour low-resource dataset. This prosody-first approach specifically models Bangru's syllabic compression, higher plosive burst energy, and distinct tonal identity.
 
-Evaluated via Mean Opinion Score (MOS), Mel-Cepstral Distortion (MCD), and Word Error Rate (WER), the finalized pipeline will produce a high-fidelity dubbed educational video prototype. This work demonstrates a robust, scalable methodology for adapting general-purpose state-of-the-art models into hyper-local dialect engineering systems.
+Evaluated via Mean Opinion Score (MOS), Mel-Cepstral Distortion (MCD), and Word Error Rate (WER), the finalized pipeline will produce a high-fidelity dubbed educational audio prototype. This work demonstrates a robust, scalable methodology for adapting general-purpose state-of-the-art models into hyper-local dialect engineering systems.
 
 ---
 
@@ -46,7 +46,7 @@ While major Indian languages enjoy robust support from digital translation tools
 
 2. **Prosodically Authentic Speech Synthesis:** Engineer a Text-to-Speech (TTS) architecture based on VITS and transfer learning to generate natural Bangru speech from a low-resource (5-hour) dataset. The model must explicitly capture the dialect's distinct acoustic signature, including its syllabic compression, higher plosive burst energy, and specific pitch contours, aiming for high naturalness (MOS ≥ 3.5).
 
-3. **End-to-End Educational Prototype:** Integrate the translation and TTS models with lip-sync technology to produce a 2–3 minute dubbed educational video. The pipeline will be evaluated on its ability to minimize speech distortion (MCD < 6.0 dB) and empirically improve learner comprehension by ≥ 20%.
+3. **End-to-End Educational Prototype:** Integrate the translation and TTS models to produce a 2–3 minute dubbed educational audio. The pipeline will be evaluated on its ability to minimize speech distortion (MCD < 6.0 dB) and empirically improve learner comprehension by ≥ 20%.
 
 ---
 
@@ -142,8 +142,6 @@ The pipeline will be rigorously evaluated against standard Hindi baselines (Meta
 | **Mel-Cepstral Distortion (MCD)** | < 6.0 dB | Measured using Python librosa to quantify the spectral distance between the synthesized dialect and ground-truth validation audio. |
 | **Mean Opinion Score (MOS)** | > 3.8 / 5.0 | Evaluated by a panel of 10 native Bangru speakers to subjectively grade naturalness, dialect authenticity, and forceful prosody capture. |
 | **Word Error Rate (WER)** | < 15% | Assessed using the AI4Bharat IndicWav2Vec ASR model to ensure synthesized speech remains intelligible. |
-| **Comprehension Impact** | ≥ 20% improvement | Measured via user surveys comparing standard Hindi video to the dubbed Bangru prototype. |
-
 ---
 
 ## 9. Timeline & Roles
@@ -205,4 +203,5 @@ Through the combination of QLoRA fine-tuning and AI4Bharat-backed VITS transfer 
 12. Ren, Y., Hu, C., Tan, X., Qin, T., Zhao, S., Zhao, Z., & Liu, T.-Y. (2020). FastSpeech 2: Fast and high-quality end-to-end text to speech. *arXiv preprint*, arXiv:2006.04558. https://arxiv.org/abs/2006.04558
 
 13. Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, L., & Polosukhin, I. (2017). Attention is all you need. In *Advances in Neural Information Processing Systems* (Vol. 30). https://papers.nips.cc/paper/7181-attention-is-all-you-need
+
 
