@@ -29,7 +29,7 @@ While major Indian languages enjoy robust support from digital translation tools
 
 ### Scope and Boundaries
 
-**In Scope:** Development and evaluation of a Hindi-to-Bangru text translation pipeline (QLoRA fine-tuned Llama-3.1) and a prosody-aware neural TTS system (VITS via AI4Bharat transfer learning), rigorously evaluated using MCD and MOS. The final deliverable is a fully functional 2–3 minute dubbed educational video prototype integrating translation, TTS, and lip-sync technology.
+**In Scope:** Development and evaluation of a Hindi-to-Bangru text translation pipeline (QLoRA fine-tuned Llama-3.1) and a prosody-aware neural TTS system (VITS via AI4Bharat transfer learning), rigorously evaluated using MCD and MOS. The final deliverable is a fully functional 2–3 minute dubbed educational speech prototype integrating translation, TTS.
 
 **Out of Scope:** Generalizing to other regional dialects, real-time low-latency translation streaming, and enterprise-grade production deployment.
 
@@ -166,7 +166,7 @@ The pipeline will be rigorously evaluated against standard Hindi baselines (Meta
 | **Project Manager** | Satyam | Coordination, timeline enforcement, compute resource allocation, and milestone tracking. |
 | **NLP Lead** | Abhishek | Rule-guided synthetic data generation, building the text translation pipeline, and QLoRA fine-tuning. |
 | **Speech (TTS) Lead** | Fazlur | Implementing the VITS architecture, managing AI4Bharat transfer learning, and executing the Matcha-TTS backup plan if necessary. |
-| **Integration & Evaluation Lead** | Sanket | Connecting translation outputs to TTS, conducting MOS/MCD evaluations, and applying Wav2Lip for video prototype lip-syncing. |
+| **Integration & Evaluation Lead** | Sanket | Connecting translation outputs to TTS, conducting MOS/MCD evaluations. |
 
 ---
 
@@ -205,3 +205,4 @@ Through the combination of QLoRA fine-tuning and AI4Bharat-backed VITS transfer 
 12. Ren, Y., Hu, C., Tan, X., Qin, T., Zhao, S., Zhao, Z., & Liu, T.-Y. (2020). FastSpeech 2: Fast and high-quality end-to-end text to speech. *arXiv preprint*, arXiv:2006.04558. https://arxiv.org/abs/2006.04558
 
 13. Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, L., & Polosukhin, I. (2017). Attention is all you need. In *Advances in Neural Information Processing Systems* (Vol. 30). https://papers.nips.cc/paper/7181-attention-is-all-you-need
+
