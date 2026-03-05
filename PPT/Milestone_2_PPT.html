@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milestone 2 — Hindi-to-Haryanvi TTS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0a0a0f;
+    color: #e8e8f0;
+  }
+
+  .slide {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 80px;
+    border-bottom: 1px solid #1e1e2e;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .slide-inner {
+    width: 100%;
+    max-width: 960px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* TITLE SLIDE */
+  .slide-title {
+    background: #0a0a0f;
+    text-align: center;
+  }
+
+  .slide-title .eyebrow {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #6366f1;
+    margin-bottom: 20px;
+  }
+
+  .slide-title h1 {
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #f0f0ff;
+    margin-bottom: 16px;
+  }
+
+  .slide-title h1 span { color: #818cf8; }
+
+  .slide-title .subtitle {
+    font-size: 18px;
+    color: #888899;
+    margin-bottom: 40px;
+    font-weight: 300;
+  }
+
+  .tag-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    background: rgba(99,102,241,0.12);
+    border: 1px solid rgba(99,102,241,0.25);
+    color: #a5b4fc;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* SECTION HEADER SLIDE */
+  .slide-section {
+    background: linear-gradient(135deg, #0d0d1a 0%, #0a0a0f 100%);
+    text-align: center;
+  }
+
+  .section-number {
+    font-size: 80px;
+    font-weight: 700;
+    color: rgba(99,102,241,0.12);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .section-label {
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #6366f1;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 38px;
+    font-weight: 600;
+    color: #f0f0ff;
+  }
+
+  /* CONTENT SLIDES */
+  .slide-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #6366f1;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  .slide h2 {
+    font-size: 32px;
+    font-weight: 600;
+    color: #f0f0ff;
+    margin-bottom: 32px;
+    line-height: 1.2;
+  }
+
+  .slide h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #c7c7e0;
+    margin-bottom: 16px;
+    margin-top: 28px;
+  }
+
+  /* CARDS */
+  .card-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .card-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .card-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .card.accent-left {
+    border-left: 3px solid #6366f1;
+  }
+
+  .card.accent-left.green { border-left-color: #34d399; }
+  .card.accent-left.purple { border-left-color: #a78bfa; }
+  .card.accent-left.amber { border-left-color: #fbbf24; }
+  .card.accent-left.rose { border-left-color: #fb7185; }
+
+  .card-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #6366f1;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .card-label.green { color: #34d399; }
+  .card-label.purple { color: #a78bfa; }
+  .card-label.amber { color: #fbbf24; }
+  .card-label.rose { color: #fb7185; }
+
+  .card h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e0e0f0;
+    margin-bottom: 8px;
+  }
+
+  .card p, .card li {
+    font-size: 14px;
+    color: #9999b3;
+    line-height: 1.6;
+  }
+
+  .card ul { padding-left: 16px; }
+  .card li { margin-bottom: 4px; }
+
+  /* PIPELINE FLOW */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 32px 0;
+    flex-wrap: nowrap;
+  }
+
+  .pipeline-step {
+    flex: 1;
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 10px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+
+  .pipeline-step .step-num {
+    font-size: 11px;
+    color: #6366f1;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .pipeline-step .step-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e0e0f0;
+    margin-bottom: 4px;
+  }
+
+  .pipeline-step .step-sub {
+    font-size: 12px;
+    color: #7777a0;
+  }
+
+  .arrow {
+    color: #4a4a7a;
+    font-size: 22px;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+  }
+
+  th {
+    background: rgba(99,102,241,0.1);
+    color: #a5b4fc;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgba(99,102,241,0.2);
+  }
+
+  td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #b0b0cc;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr.total-row td {
+    color: #e0e0f0;
+    font-weight: 600;
+    background: rgba(99,102,241,0.06);
+  }
+
+  .mono {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    background: rgba(99,102,241,0.1);
+    color: #a5b4fc;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* STAT BLOCKS */
+  .stat-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-block {
+    flex: 1;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-block .stat-val {
+    font-size: 32px;
+    font-weight: 700;
+    color: #818cf8;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-block .stat-label {
+    font-size: 12px;
+    color: #6666aa;
+    font-weight: 500;
+  }
+
+  /* BULLET LIST */
+  .bullet-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .bullet-list li {
+    padding: 10px 0;
+    padding-left: 20px;
+    position: relative;
+    font-size: 15px;
+    color: #b0b0cc;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.5;
+  }
+
+  .bullet-list li:last-child { border-bottom: none; }
+
+  .bullet-list li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: #6366f1;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+
+  .bullet-list li strong { color: #e0e0f0; }
+
+  /* CHECKLIST */
+  .checklist { list-style: none; padding: 0; }
+
+  .checklist li {
+    padding: 9px 0 9px 28px;
+    position: relative;
+    font-size: 14px;
+    color: #b0b0cc;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .checklist li:last-child { border-bottom: none; }
+
+  .checklist li.done::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #34d399;
+    font-weight: 700;
+  }
+
+  .checklist li.pending::before {
+    content: '○';
+    position: absolute;
+    left: 0;
+    color: #fbbf24;
+    font-weight: 700;
+  }
+
+  /* SPLIT BAR */
+  .split-bar {
+    display: flex;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 16px 0 8px;
+  }
+
+  .split-bar .seg-train { flex: 8; background: #6366f1; }
+  .split-bar .seg-val   { flex: 1; background: #a78bfa; }
+  .split-bar .seg-test  { flex: 1; background: #c4b5fd; }
+
+  .split-legend {
+    display: flex;
+    gap: 20px;
+    font-size: 13px;
+    color: #8888aa;
+  }
+
+  .split-legend span { display: flex; align-items: center; gap: 6px; }
+
+  .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* BADGE */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .badge.fallback {
+    background: rgba(251,191,36,0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(251,191,36,0.25);
+  }
+
+  .badge.primary {
+    background: rgba(52,211,153,0.1);
+    color: #34d399;
+    border: 1px solid rgba(52,211,153,0.25);
+  }
+
+  /* SLIDE NUMBER */
+  .slide-num {
+    position: absolute;
+    bottom: 28px;
+    right: 40px;
+    font-size: 12px;
+    color: #333355;
+    font-weight: 500;
+    z-index: 2;
+  }
+
+  /* DIVIDER */
+  .divider {
+    width: 48px;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #a78bfa);
+    border-radius: 2px;
+    margin-bottom: 24px;
+  }
+
+  /* TWO COLUMN */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .rule-pill {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .rule-pill .hindi { color: #9999c0; }
+  .rule-pill .arrow-sm { color: #4a4a6a; font-size: 16px; }
+  .rule-pill .haryanvi { color: #a5b4fc; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: TITLE -->
+<div class="slide slide-title">
+  <div class="slide-inner">
+    <div class="eyebrow">Milestone 2 · Dataset Collection & Preprocessing</div>
+    <h1>Hindi → Haryanvi<br><span>Text-to-Speech</span></h1>
+    <p class="subtitle">Building the data foundation for a two-stage speech synthesis pipeline</p>
+    <div class="tag-row">
+      <span class="tag">NLP</span>
+      <span class="tag">Low-Resource Dialect</span>
+      <span class="tag">Bangru / Haryanvi</span>
+      <span class="tag">TTS</span>
+      <span class="tag">LLM Fine-tuning</span>
+    </div>
+  </div>
+  <div class="slide-num">1</div>
+</div>
+
+<!-- SLIDE 2: PROJECT OVERVIEW -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Project Overview</div>
+    <h2>Two-Stage Pipeline</h2>
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="step-num">Input</div>
+        <div class="step-title">Hindi Text</div>
+        <div class="step-sub">Standard written Hindi</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step">
+        <div class="step-num">Stage 1</div>
+        <div class="step-title">Text → Text</div>
+        <div class="step-sub">Hindi → Haryanvi (Bangru) via LLaMA 3.1</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step">
+        <div class="step-num">Stage 2</div>
+        <div class="step-title">Text → Speech</div>
+        <div class="step-sub">Haryanvi TTS via Sarvam / VITS</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step">
+        <div class="step-num">Output</div>
+        <div class="step-title">Haryanvi Audio</div>
+        <div class="step-sub">Natural spoken Haryanvi</div>
+      </div>
+    </div>
+    <div class="card-grid cols-2" style="margin-top:8px">
+      <div class="card accent-left">
+        <div class="card-label">Module A</div>
+        <h4>Text Dataset</h4>
+        <p>Parallel Hindi–Haryanvi sentence pairs for translation model fine-tuning</p>
+      </div>
+      <div class="card accent-left green">
+        <div class="card-label green">Module B</div>
+        <h4>Audio Dataset</h4>
+        <p>Haryanvi audio + transcripts for TTS model fine-tuning</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">2</div>
+</div>
+
+<!-- SLIDE 3: DATASET OVERVIEW TABLE -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Dataset Overview</div>
+    <h2>Two Independent Pipelines</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Aspect</th>
+          <th>Module A — Text</th>
+          <th>Module B — Audio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Task</td><td>Seq-to-seq translation</td><td>Text-to-speech synthesis</td></tr>
+        <tr><td>Input</td><td>Hindi sentences</td><td>Haryanvi transcripts</td></tr>
+        <tr><td>Output</td><td>Haryanvi sentences</td><td>Haryanvi audio waveforms</td></tr>
+        <tr><td>Format</td><td>CSV / JSON</td><td>Audio array + transcript</td></tr>
+        <tr><td>Dataset Size</td><td>5,594 pairs</td><td>5,515 clips (~1.89 GB)</td></tr>
+        <tr><td>Split Strategy</td><td>80 / 10 / 10</td><td>90 / 10</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-num">3</div>
+</div>
+
+<!-- SLIDE 4: SECTION HEADER — MODULE A -->
+<div class="slide slide-section">
+  <div class="slide-inner" style="text-align:center">
+    <div class="section-number">A</div>
+    <div class="section-label">Module A</div>
+    <div class="section-title">Text Dataset<br>Hindi → Haryanvi Translation</div>
+  </div>
+  <div class="slide-num">4</div>
+</div>
+
+<!-- SLIDE 5: TEXT DATA SOURCES -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Module A · Data Sources</div>
+    <h2>Text Corpus Sources</h2>
+    <div class="card-grid" style="grid-template-columns: 1fr 1fr; gap:16px">
+      <div class="card accent-left">
+        <div class="card-label">Source 1 · Primary</div>
+        <h4>XOR-QA Indic (Google Research)</h4>
+        <ul>
+          <li>594 English–Haryanvi QA pairs</li>
+          <li>English → Hindi via Google Translate</li>
+          <li>Manual spot-check applied</li>
+          <li>Open research license</li>
+        </ul>
+      </div>
+      <div class="card accent-left purple">
+        <div class="card-label purple">Source 2 · Primary</div>
+        <h4>Synthetic Data (Google Gemini)</h4>
+        <ul>
+          <li>5,000 parallel Hindi–Haryanvi pairs</li>
+          <li>Research-grade prompt enforcing Bangru rules</li>
+          <li>Diverse topics & sentence lengths</li>
+          <li>Labelled as LLM-generated</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px; background: rgba(251,191,36,0.04); border-color: rgba(251,191,36,0.15);">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="badge fallback">Fallback</span>
+        <div>
+          <strong style="color:#e0e0f0; font-size:14px;">Source 3 — Grierson's Linguistic Survey of India (1916)</strong>
+          <p style="font-size:13px; color:#7777a0; margin-top:4px;">Not used currently. Public domain. Reserved for expansion if primary corpus is insufficient for model convergence.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">5</div>
+</div>
+
+<!-- SLIDE 6: SYNTHETIC DATA DETAILS — LINGUISTIC RULES -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Module A · Synthetic Generation</div>
+    <h2>Bangru Linguistic Rules Enforced</h2>
+    <div class="two-col">
+      <div>
+        <h3>Morpho-syntactic Substitutions</h3>
+        <div class="rule-pill"><span class="hindi">है</span><span class="arrow-sm">→</span><span class="haryanvi">सै</span></div>
+        <div class="rule-pill"><span class="hindi">हूँ</span><span class="arrow-sm">→</span><span class="haryanvi">सूँ</span></div>
+        <div class="rule-pill"><span class="hindi">हैं</span><span class="arrow-sm">→</span><span class="haryanvi">से</span></div>
+        <div class="rule-pill"><span class="hindi">रहा/रही/रहे</span><span class="arrow-sm">→</span><span class="haryanvi">रया/रयी/रये</span></div>
+        <div class="rule-pill"><span class="hindi">नहीं</span><span class="arrow-sm">→</span><span class="haryanvi">कोनी</span></div>
+        <div class="rule-pill"><span class="hindi">ने</span><span class="arrow-sm">→</span><span class="haryanvi">नै</span></div>
+      </div>
+      <div>
+        <h3>Lexical Replacements</h3>
+        <div class="rule-pill"><span class="hindi">मुझे/मैंने</span><span class="arrow-sm">→</span><span class="haryanvi">मन्ने</span></div>
+        <div class="rule-pill"><span class="hindi">तुम्हें/तुमने</span><span class="arrow-sm">→</span><span class="haryanvi">तन्ने</span></div>
+        <div class="rule-pill"><span class="hindi">हमारा / तुम्हारा</span><span class="arrow-sm">→</span><span class="haryanvi">म्हारा / थारा</span></div>
+        <div class="rule-pill"><span class="hindi">यह / वह</span><span class="arrow-sm">→</span><span class="haryanvi">यो / वो</span></div>
+        <div class="rule-pill"><span class="hindi">बहुत / कहाँ / कब</span><span class="arrow-sm">→</span><span class="haryanvi">घणा / कड़े / कदे</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">6</div>
+</div>
+
+<!-- SLIDE 7: SYNTHETIC DATA — DISTRIBUTION & QUALITY -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Module A · Synthetic Generation</div>
+    <h2>Length Distribution & Quality Controls</h2>
+    <div class="two-col">
+      <div>
+        <h3>Sentence Length Distribution</h3>
+        <table>
+          <thead><tr><th>Type</th><th>Target %</th></tr></thead>
+          <tbody>
+            <tr><td>Short (5–8 words)</td><td>20%</td></tr>
+            <tr><td>Medium (10–15 words)</td><td>25%</td></tr>
+            <tr><td>Long (20+ words)</td><td>20%</td></tr>
+            <tr><td>Two-sentence</td><td>15%</td></tr>
+            <tr><td>Three-sentence</td><td>10%</td></tr>
+            <tr><td>Paragraph (5–6 sentences)</td><td>10%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Quality Constraints</h3>
+        <ul class="bullet-list">
+          <li>No sentence duplication</li>
+          <li>No literal word-by-word translation</li>
+          <li>No untranslated Hindi words where Haryanvi equivalent exists</li>
+          <li>Varied complexity to prevent <strong>dataset collapse</strong></li>
+          <li>16 topic domains covered</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">7</div>
+</div>
+
+<!-- SLIDE 8: TEXT QUALITY ASSESSMENT -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Module A · Quality Assessment</div>
+    <h2>Text Dataset Cleaning Pipeline</h2>
+    <div class="card-grid cols-2" style="margin-bottom:24px">
+      <div class="card accent-left">
+        <div class="card-label">Step 1</div>
+        <h4>Missing Value Check</h4>
+        <p>Column-wise null check via <span class="mono">df.isnull().sum()</span>. Rows with null Hindi or Haryanvi entries dropped.</p>
+      </div>
+      <div class="card accent-left purple">
+        <div class="card-label purple">Step 2</div>
+        <h4>Deduplication</h4>
+        <p>Exact duplicates removed via <span class="mono">drop_duplicates()</span> before splitting. Count logged for traceability.</p>
+      </div>
+      <div class="card accent-left green">
+        <div class="card-label green">Step 3</div>
+        <h4>Length Filtering</h4>
+        <p>Hindi sentences: min <strong>3 words</strong>, max <strong>100 words</strong>. Removes fragments and extreme outliers.</p>
+      </div>
+      <div class="card accent-left amber">
+        <div class="card-label amber">Step 4</div>
+        <h4>Manual Spot-check</h4>
+        <p>Subset of XOR-QA pairs reviewed for Haryanvi authenticity. Google Translate artifacts flagged and corrected.</p>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Source</th><th>Raw Samples</th><th>Retained</th></tr></thead>
+      <tbody>
+        <tr><td>XOR-QA Indic (GitHub)</td><td>594</td><td>594</td></tr>
+        <tr><td>Synthetic (Gemini)</td><td>5,000</td><td>5,000</td></tr>
+        <tr class="total-row"><td>Total</td><td>5,594</td><td>5,594</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-num">8</div>
+</div>
+
+<!-- SLIDE 9: TEXT SPLITS & TOKENIZATION -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Module A · Splits & Formatting</div>
+    <h2>Dataset Splits & LLM Formatting</h2>
+    <div class="two-col">
+      <div>
+        <h3>Train / Val / Test Split</h3>
+        <div class="split-bar">
+          <div class="seg-train"></div>
+          <div class="seg-val"></div>
+          <div class="seg-test"></div>
+        </div>
+        <div class="split-legend">
+          <span><span class="dot" style="background:#6366f1"></span>Train 80% (~4,475)</span>
+          <span><span class="dot" style="background:#a78bfa"></span>Val 10% (~560)</span>
+          <span><span class="dot" style="background:#c4b5fd"></span>Test 10% (~560)</span>
+        </div>
+        <div class="card" style="margin-top:20px; padding:16px;">
+          <p style="font-size:13px; color:#7777a0;"><strong style="color:#c0c0d8;">Leakage Prevention:</strong> Deduplication before split. Fixed seed <span class="mono">42</span>. No temporal or source-based leakage.</p>
+        </div>
+      </div>
+      <div>
+        <h3>LLaMA 3.1 Chat Template Format</h3>
+        <ul class="bullet-list">
+          <li><strong>System:</strong> Hindi→Haryanvi translator persona with morpho-syntactic rules</li>
+          <li><strong>User turn:</strong> Hindi source sentence</li>
+          <li><strong>Assistant turn:</strong> Target Haryanvi sentence</li>
+          <li><strong>Max length:</strong> 128 tokens, padded, truncated</li>
+          <li><strong>Output:</strong> HuggingFace <span class="mono">DatasetDict</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">9</div>
+</div>
+
+<!-- SLIDE 10: SECTION HEADER — MODULE B -->
+<div class="slide slide-section">
+  <div class="slide-inner" style="text-align:center">
+    <div class="section-number">B</div>
+    <div class="section-label">Module B</div>
+    <div class="section-title">Audio Dataset<br>Haryanvi TTS</div>
+  </div>
+  <div class="slide-num">10</div>
+</div>
+
+<!-- SLIDE 11: AUDIO SOURCES -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Module B · Data Sources</div>
+    <h2>Audio Corpus Sources</h2>
+    <div class="card accent-left green" style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div class="card-label green">Source 1 · Primary <span class="badge primary" style="margin-left:8px">Active</span></div>
+          <h4>HuggingFace — ankitdhiman/haryanvi-tts</h4>
+          <ul style="margin-top:8px">
+            <li>5,515 audio–text pairs in Bangru dialect</li>
+            <li>~1.89 GB · AudioFolder format · metadata.csv</li>
+            <li>High quality, pre-aligned, research-ready</li>
+            <li>No explicit license — confirm before commercial use</li>
+          </ul>
+        </div>
+        <div style="text-align:right; flex-shrink:0; margin-left:20px;">
+          <div class="stat-block" style="min-width:100px">
+            <div class="stat-val" style="font-size:24px; color:#34d399">5,515</div>
+            <div class="stat-label">clips</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="background: rgba(251,191,36,0.04); border-color: rgba(251,191,36,0.15);">
+      <div class="card-label amber">Source 2 · Fallback <span class="badge fallback" style="margin-left:8px">Not Active</span></div>
+      <h4 style="color:#e0e0f0; margin-bottom:8px">YouTube Audio Extraction</h4>
+      <p style="font-size:13px; color:#7777a0;">Activated only if HuggingFace data falls below ~5–10 hour threshold. Pipeline: <span class="mono">yt-dlp</span> + FFmpeg → MP3 192kbps. Transcription via <span class="mono">youtube-transcript-api</span> or Whisper tiny fallback.</p>
+      <p style="font-size:12px; color:#555580; margin-top:8px;">3 videos identified · Academic use only · YouTube ToS compliance required</p>
+    </div>
+  </div>
+  <div class="slide-num">11</div>
+</div>
+
+<!-- SLIDE 12: AUDIO QUALITY STANDARDS -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Module B · Quality Standards</div>
+    <h2>Audio Quality Parameters</h2>
+    <div class="stat-row" style="margin-bottom:24px">
+      <div class="stat-block">
+        <div class="stat-val">22,050</div>
+        <div class="stat-label">Hz target sample rate</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-val">1.0s</div>
+        <div class="stat-label">minimum clip duration</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-val">15.0s</div>
+        <div class="stat-label">maximum clip duration</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-val">90/10</div>
+        <div class="stat-label">train / eval split</div>
+      </div>
+    </div>
+    <div class="card-grid cols-2">
+      <div class="card accent-left">
+        <div class="card-label">Resampling</div>
+        <h4>Programmatic via HuggingFace</h4>
+        <p>All audio cast using <span class="mono">Audio(sampling_rate=22050)</span>. Consistent regardless of original source format.</p>
+      </div>
+      <div class="card accent-left green">
+        <div class="card-label green">Output Format</div>
+        <h4>TTS-Ready DatasetDict</h4>
+        <p><span class="mono">audio_array</span> — NumPy waveform at 22,050 Hz<br><span class="mono">normalized_text</span> — Whitespace-stripped transcript</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">12</div>
+</div>
+
+<!-- SLIDE 13: YOUTUBE FALLBACK PIPELINE -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Module B · Fallback Pipeline</div>
+    <h2>YouTube Extraction — If Activated</h2>
+    <div class="pipeline" style="margin-bottom:24px">
+      <div class="pipeline-step">
+        <div class="step-num">1</div>
+        <div class="step-title">yt-dlp</div>
+        <div class="step-sub">Download best audio → MP3 192kbps</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step">
+        <div class="step-num">2</div>
+        <div class="step-title">Transcript</div>
+        <div class="step-sub">YT API first, Whisper tiny as fallback</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step">
+        <div class="step-num">3</div>
+        <div class="step-title">Convert</div>
+        <div class="step-sub">MP3 → WAV 22,050 Hz mono</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step">
+        <div class="step-num">4</div>
+        <div class="step-title">Segment</div>
+        <div class="step-sub">Clip by Whisper timestamps · 1–10s</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step">
+        <div class="step-num">5</div>
+        <div class="step-title">Ingest</div>
+        <div class="step-sub">Into rds.py with video-ID tag</div>
+      </div>
+    </div>
+    <div class="card" style="background:rgba(251,191,36,0.04); border-color:rgba(251,191,36,0.15)">
+      <p style="font-size:13px; color:#b0a060;"><strong style="color:#fbbf24;">Note:</strong> Whisper <span class="mono">tiny</span> used for speed. Upgrade to <span class="mono">medium</span> or <span class="mono">large-v3</span> recommended if fallback is activated for production data collection. Speaker/video-stratified splitting required to prevent train/eval leakage.</p>
+    </div>
+  </div>
+  <div class="slide-num">13</div>
+</div>
+
+<!-- SLIDE 14: DATASET ADEQUACY -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Adequacy Assessment</div>
+    <h2>Is the Data Sufficient?</h2>
+    <div class="card-grid cols-2">
+      <div class="card accent-left">
+        <div class="card-label">Module A — Text</div>
+        <h4>5,594 Parallel Pairs</h4>
+        <ul class="bullet-list" style="margin-top:8px">
+          <li>Adequate starting point for LLM fine-tuning on a low-resource dialect task</li>
+          <li>Synthetic data justified — extreme scarcity of Hindi–Haryanvi parallel corpora</li>
+          <li>Bangru morphology enforced in prompt → reduces dialect drift risk</li>
+          <li><strong>If insufficient:</strong> Grierson parsing activated as next step</li>
+        </ul>
+      </div>
+      <div class="card accent-left green">
+        <div class="card-label green">Module B — Audio</div>
+        <h4>5,515 Clips · ~1.89 GB</h4>
+        <ul class="bullet-list" style="margin-top:8px">
+          <li>High-quality, pre-aligned baseline from HuggingFace</li>
+          <li>Total usable hours to be confirmed after 1–10s filtering</li>
+          <li><strong>If &lt; 5–10 hrs:</strong> Activate YouTube fallback</li>
+          <li><strong>Or:</strong> Transfer-learn from Hindi TTS (IndicTTS / Sarvam-TTS)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">14</div>
+</div>
+
+<!-- SLIDE 15: INTER-TASK ALIGNMENT -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Inter-Task Alignment</div>
+    <h2>Coupling Module A ↔ Module B</h2>
+    <div class="pipeline" style="margin-bottom:28px">
+      <div class="pipeline-step">
+        <div class="step-num">Module A output</div>
+        <div class="step-title">Haryanvi Text</div>
+        <div class="step-sub">Devanagari script</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step" style="background:rgba(52,211,153,0.06); border-color:rgba(52,211,153,0.2)">
+        <div class="step-num" style="color:#34d399">Critical Link</div>
+        <div class="step-title">Text Normalization</div>
+        <div class="step-sub">Shared function — both modules</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="pipeline-step">
+        <div class="step-num">Module B input</div>
+        <div class="step-title">TTS Transcript</div>
+        <div class="step-sub">Must match training format</div>
+      </div>
+    </div>
+    <div class="card-grid cols-2">
+      <div class="card accent-left">
+        <div class="card-label">Script Consistency</div>
+        <h4>Devanagari Throughout</h4>
+        <p>Vocabulary and script in text training data must match transcript format expected by TTS model — consistent Haryanvi spellings required.</p>
+      </div>
+      <div class="card accent-left rose">
+        <div class="card-label rose">⚠ Open Item</div>
+        <h4>Shared Normalization Function</h4>
+        <p>A unified text normalization function (anusvara, nukta, punctuation handling) to be implemented before inference. Silent failures otherwise.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">15</div>
+</div>
+
+<!-- SLIDE 16: ETHICS -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Ethical Considerations</div>
+    <h2>Data Sourcing & Usage</h2>
+    <table>
+      <thead><tr><th>Source</th><th>Status</th><th>Constraints</th></tr></thead>
+      <tbody>
+        <tr><td>XOR-QA (Google Research)</td><td><span style="color:#34d399">✓ Open</span></td><td>Academic use; Google open-data policy</td></tr>
+        <tr><td>Grierson 1916 (Book)</td><td><span style="color:#34d399">✓ Public Domain</span></td><td>No copyright; fallback only</td></tr>
+        <tr><td>Synthetic (Gemini)</td><td><span style="color:#34d399">✓ Labelled</span></td><td>Clearly LLM-generated; segregated in eval</td></tr>
+        <tr><td>HuggingFace TTS</td><td><span style="color:#fbbf24">⚠ Unlicensed</span></td><td>Research only; confirm with author before commercial use</td></tr>
+        <tr><td>YouTube Audio</td><td><span style="color:#fbbf24">⚠ Fallback</span></td><td>Academic fair-use; YouTube ToS compliance required</td></tr>
+        <tr><td>Representation</td><td><span style="color:#a78bfa">✓ Diverse</span></td><td>16 topic domains; avoids cultural stereotyping</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-num">16</div>
+</div>
+
+<!-- SLIDE 17: REPRODUCIBILITY -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-label">Reproducibility</div>
+    <h2>Checklist</h2>
+    <div class="two-col">
+      <div>
+        <ul class="checklist">
+          <li class="done">Fixed random seed (<span class="mono">RANDOM_SEED = 42</span>) throughout</li>
+          <li class="done">All thresholds in central <span class="mono">DataConfig</span> class</li>
+          <li class="done">Duplicate removal logged before splitting</li>
+          <li class="done">HuggingFace <span class="mono">DatasetDict</span> for consistent loading</li>
+          <li class="done">Audio resampled programmatically to 22,050 Hz</li>
+        </ul>
+      </div>
+      <div>
+        <ul class="checklist">
+          <li class="done">Per-source counts documented (XOR-QA: 594, Synthetic: 5,000)</li>
+          <li class="done">YouTube pipeline documented; video URLs logged</li>
+          <li class="pending">Total audio hours — pending duration filter run</li>
+          <li class="pending">Shared text normalization function — pending implementation</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px; padding:14px 18px;">
+      <p style="font-size:13px; color:#7777a0;">Implemented across two Colab notebooks: <span class="mono">rds.py</span> (main pipeline) · <span class="mono">youtube_video_to_audio.py</span> (fallback extraction)</p>
+    </div>
+  </div>
+  <div class="slide-num">17</div>
+</div>
+
+<!-- SLIDE 18: SUMMARY -->
+<div class="slide slide-section" style="text-align:left;">
+  <div class="slide-inner">
+    <div class="slide-label">Summary</div>
+    <h2 style="font-size:34px; margin-bottom:28px; color:#f0f0ff">Milestone 2 — Key Takeaways</h2>
+    <div class="card-grid cols-2">
+      <div class="card accent-left">
+        <div class="card-label">Text Pipeline</div>
+        <ul class="bullet-list">
+          <li><strong>5,594 Hindi–Haryanvi pairs</strong> from 2 active sources</li>
+          <li>Strict Bangru morphological rules in synthetic generation</li>
+          <li>80/10/10 split · no leakage · seed 42</li>
+          <li>Formatted for LLaMA 3.1 instruction fine-tuning</li>
+        </ul>
+      </div>
+      <div class="card accent-left green">
+        <div class="card-label green">Audio Pipeline</div>
+        <ul class="bullet-list">
+          <li><strong>5,515 clips (~1.89 GB)</strong> from HuggingFace</li>
+          <li>22,050 Hz · 1–10s duration window</li>
+          <li>90/10 train/eval split · seed 42</li>
+          <li>YouTube fallback pipeline ready if needed</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px; padding:16px 20px; border-color:rgba(99,102,241,0.2)">
+      <p style="font-size:14px; color:#8888b0; text-align:center;">Data is ethically sourced, quality-assessed, and structured for direct ingestion into Stage 1 (LLaMA translation) and Stage 2 (Sarvam/VITS TTS) fine-tuning pipelines.</p>
+    </div>
+  </div>
+  <div class="slide-num">18</div>
+</div>
+
+</body>
+</html>
