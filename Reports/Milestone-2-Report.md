@@ -23,7 +23,7 @@ This milestone documents the datasets collected and created for both stages, inc
 
 ---
 
-## 2. Dataset Overview
+## 2. Dataset Overview [Data_Link](https://drive.google.com/drive/folders/1chYnNWDCP6kbMaqBwAPUgrz84f_0sbI2?usp=sharing)
 
 The project uses **two independent dataset pipelines** — one for the translation sub-task (Module A) and one for the speech synthesis sub-task (Module B).
 
