@@ -1,362 +1,199 @@
-# Milestone 3 Report: Model Architecture & End-to-End Pipeline Verification  
-### Project: Regional Dialect Synthesis Pipeline (Haryanvi)
+# Milestone 3 Report: Model Architecture & End-to-End Pipeline Verification
 
----
-
-## Team Members
-
-- Abhishek  
-- Satyam Srivastava  
-- Sanket Agrawal  
-- Md Fazlur Rahman  
-
----
+**Project:** Regional Dialect Synthesis Pipeline (Standard Hindi to Haryanvi/Bangru)  
+**Team Members:** Abhishek, Satyam Srivastava, Sanket Agrawal, Md Fazlur Rahman  
 
 ## 1. Overview
+This milestone outlines the design, justification, and verification of our dual-architecture machine learning pipeline. The project aims to cross the low-resource dialect barrier by breaking the task into two sequential domains:
+* **Module A (Text-to-Text):** Translating Standard Hindi to the Haryanvi (Bangru) dialect.
+* **Module B (Text-to-Speech):** Synthesizing the translated Haryanvi text into highly natural, dialect-accurate speech.
 
-This milestone focuses on designing and justifying the model architecture and validating the **end-to-end pipeline** using a subset of the dataset.
-
-The system consists of two major components:
-
-1. **Module A:** Hindi → Haryanvi Translation (Text-to-Text)
-2. **Module B:** Haryanvi Text → Speech (Text-to-Audio)
-
-We also verify that all components—from preprocessing to inference—work together correctly.
+This report verifies the complete end-to-end pipeline by running a subset of the data ("tracer bullet" execution) to confirm that preprocessing, tokenization, forward passes, and output generations function cohesively without dimension mismatches or architectural failures.
 
 ---
 
 ## 2. Dataset Organization
+The datasets are strictly isolated into distinct environments to prevent data leakage and memory overhead, utilizing dedicated Hugging Face repositories for both domains.
 
-The dataset is structured into raw and processed formats for both text and audio pipelines.
+**Text Dataset:** `Satyam-Srivastava/RDS` (Parallel Hindi-Haryanvi corpus).
+**Audio Dataset:** `ankitdhiman/haryanvi-tts` (~4,000 single-speaker Haryanvi text-audio pairs).
 
 ### Directory Structure
-
-
-project/
+```text
+project_root/
 │
-├── data/
-│ ├── raw/
-│ │ ├── text/
-│ │ │ ├── xor_qa.json
-│ │ │ ├── synthetic.json
-│ │ │
-│ │ ├── audio/
-│ │ ├── wav_files/
-│ │ └── metadata.csv
-│ │
-│ ├── processed/
-│ │ ├── text/
-│ │ │ ├── train.json
-│ │ │ ├── val.json
-│ │ │ ├── test.json
-│ │ │
-│ │ ├── audio/
-│ │ ├── train/
-│ │ ├── eval/
+├── data_text/
+│   ├── raw/
+│   │   ├── train_5000.json
+│   │   └── supplementary_pairs.txt
+│   ├── processed/
+│   │   ├── train.json (80%)
+│   │   ├── val.json   (10%)
+│   │   └── test.json  (10%)
+│
+├── data_audio/
+│   ├── raw/
+│   │   └── hf_cache_streaming/ (Bypassing torchcodec limits)
+│   ├── haryanvi_vits_data/ (LJSpeech Format)
+│   │   ├── wavs/
+│   │   │   ├── audio_0.wav
+│   │   │   └── ...
+│   │   └── metadata.csv (Matched text-to-audio index)
 │
 ├── notebooks/
-│ ├── text_to_text.ipynb
-│ ├── text_to_audio.ipynb
+│   ├── 01_llama3_text_translation.ipynb
+│   └── 02_vits_acoustic_modeling.ipynb
 │
-├── models/
-└── outputs/
-
+└── models/
+    ├── rds_lora_adapter/
+    └── tts_output/vits_haryanvi_test/
+```
 
 ---
 
 ## 3. Preprocessing Pipeline
 
-### 3.1 Text Preprocessing
+### 3.1 Module A: Text Preprocessing & Tokenization
+Before passing text to the LLM, the data undergoes strict formatting to map to a causal language modeling task:
+1.  **Length Filtering:** Sentences outside the 3–25 word boundary are dropped to prevent padding inefficiencies.
+2.  **Chat Template Formatting:** Data is mapped to the LLaMA 3.1 instruction format.
+    * *System:* "You are a regional dialect translator..."
+    * *User:* "तुम कहाँ जा रहे हो?" (Hindi)
+    * *Assistant:* "तू कड़े जा रया सै?" (Haryanvi)
+3.  **Tokenization:** We use the `Meta-Llama-3.1-8B-Instruct` tokenizer. 
+    * **Padding/Truncation:** Sequences are padded using the End-Of-Sequence (EOS) token to a `max_seq_length` of 256.
 
-The following steps are applied:
-
-- Removal of null values and duplicates  
-- Sentence length filtering (3–100 words)  
-- Unicode normalization (Devanagari consistency)  
-- Instruction-based formatting for LLM  
-
-#### Example:
-
-
-System: Translate Hindi to Haryanvi
-User: तुम कहाँ जा रहे हो?
-Assistant: तू कड़े जा रया सै?
-
-
----
-
-### 3.2 Tokenization
-
-- Tokenizer: LLaMA 3.1 tokenizer  
-- Max sequence length: 128  
-- Padding: EOS token  
-- Output format: tensors (`input_ids`, `attention_mask`)  
+### 3.2 Module B: Audio Preprocessing & Phonemization
+Audio processing requires mapping continuous waveforms to discrete phonemes:
+1.  **Format Extraction:** We bypass the Hugging Face `torchcodec` bug by streaming raw bytes (`decode=False`) and using `soundfile` to extract explicit NumPy arrays.
+2.  **Resampling:** All audio is strictly standardized to **22050 Hz** (required for VITS).
+3.  **Metadata Alignment:** Exported to the standard `LJSpeech` format (`filename|transcript|normalized_transcript`).
+4.  **Phonemizer:** We apply the `espeak-ng` engine configured for Hindi (`hi`) to map Devanagari script into the International Phonetic Alphabet (IPA). This handles schwa-deletion specific to North Indian dialects.
 
 ---
 
-### 3.3 Audio Preprocessing
+## 4. Model Architecture & Data Flow Diagram
 
-- Resampling: 22050 Hz  
-- Duration filtering: 1–15 seconds  
-- Transcript normalization  
+### 4.1 Module A: LLaMA 3.1 + QLoRA (Text Translation)
+* **Base Model:** `meta-llama/Meta-Llama-3.1-8B-Instruct`
+* **Quantization:** 4-bit NormalFloat (NF4) via `bitsandbytes` (enables A100 VRAM compliance).
+* **Adaptation:** Low-Rank Adaptation (LoRA) targeting all linear layers (`q_proj`, `k_proj`, `v_proj`, `o_proj`) to learn morpho-syntactic dialect shifts without catastrophic forgetting.
 
-#### Output format:
+### 4.2 Module B: VITS via Transfer Learning (Text-to-Speech)
+* **Architecture:** Variational Inference with adversarial learning for end-to-end Text-to-Speech.
+* **Initialization Strategy:** To overcome the 4,000-sample limitation, we initialize using pre-trained Hindi checkpoints (e.g., AI4Bharat `vits_rasa_13`).
+* **Components:**
+    * *Text Encoder:* Maps phonemes to hidden representations.
+    * *Stochastic Duration Predictor:* Captures the variable, highly compressed syllabic rhythm of Bangru.
+    * *Posterior Encoder (Normalizing Flows):* Maps linear spectrograms to a complex latent space.
+    * *Vocoder:* Integrated HiFi-GAN for direct waveform generation.
 
+### 4.3 Data Flow Architecture
 
-{
-"audio_array": waveform,
-"text": "राम खेत में जा रया सै"
-}
-
-
----
-
-## 4. Model Architecture
-
----
-
-### 4.1 Module A: Translation Model
-
-**Architecture: LLaMA 3.1 + QLoRA**
-
-#### Key Components:
-
-- Pretrained Transformer (LLaMA 3.1)
-- Low-Rank Adaptation (LoRA layers)
-- Instruction tuning framework
-
-#### Data Flow:
-
-
-Hindi Text → Tokenizer → LLaMA + QLoRA → Haryanvi Text
-
-
----
-
-### Why this Architecture?
-
-- Efficient fine-tuning for low-resource datasets  
-- Strong multilingual capabilities  
-- Captures morpho-syntactic transformations  
+```text
+[RAW HINDI INPUT] ("मैं आज बाजार जा रहा हूँ")
+       │
+       ▼
+(LLaMA Tokenizer) ───────> [Input_IDs: Shape (Batch, Seq_Len)]
+       │
+       ▼
+[Module A: LLaMA 3.1 + QLoRA] ──> (Next Token Prediction / Cross-Entropy)
+       │
+       ▼
+[HARYANVI TEXT OUTPUT] ("मैं आज बाजार जा रया सै।")
+       │
+       ▼
+(espeak-ng Phonemizer) ──> [Phoneme Sequence: Shape (Batch, Phoneme_Len)]
+       │
+       ▼
+[Module B: VITS Text Encoder & Duration Predictor]
+       │
+       ▼
+[Latent Acoustic Space] ──> (Flow-based Decoder + HiFi-GAN)
+       │
+       ▼
+[RAW AUDIO WAVEFORM] (.wav file @ 22050Hz)
+```
 
 ---
 
-### Limitations:
+## 5. Input-Output Compatibility & Tensor Shapes
+The pipeline ensures flawless handoffs between components:
 
-- Sensitive to synthetic data quality  
-- May hallucinate dialect patterns  
+| Component / Layer | Expected Input Format | Tensor Shape / Dimensions | Output Format |
+| :--- | :--- | :--- | :--- |
+| **LLaMA Base** | Tokenized IDs + Attention Masks | `(batch_size=4, seq_len=≤256)` | Causal Logits `(batch, seq, vocab_size)` |
+| **LoRA Adapters** | Hidden States | `rank=16, alpha=32` | Delta Hidden States |
+| **VITS Encoder** | Phoneme IDs (from `espeak-ng`) | `(batch_size=8, text_length)` | Encoded latent `(batch, hidden_dim, text_length)` |
+| **VITS Vocoder** | Mel-spectrograms | `(batch, 80, mel_length)` | Audio Waveform `(batch, 1, audio_length)` |
 
----
-
-### 4.2 Module B: TTS Model (Planned + Dummy Execution)
-
-**Architecture: VITS (Planned)**
-
-#### Components:
-
-- Text Encoder  
-- Latent Variable Model  
-- Flow-based Decoder  
-- Vocoder (HiFi-GAN)
-
-#### Flow:
-
-
-Haryanvi Text → Encoder → Latent Space → Waveform Generator
-
+*Integration Note:* Module A outputs pure Devanagari UTF-8 strings. Module B accepts these strings natively, passing them to the Coqui TTS audio processor for phonemization.
 
 ---
 
-### Current Status (Milestone 3)
+## 6. Architecture Justification & Alternatives
 
-- TTS training not yet completed  
-- Dummy pipeline implemented for integration testing  
+### Text Module: Why LLaMA 3.1 QLoRA?
+* **Suitability:** Haryanvi lacks the millions of parallel sentences required to train a Seq2Seq model (like MarianMT or standard T5) from scratch.
+* **Comparison:** Standard translation models fail on dialects because they treat them as entirely new languages. LLaMA 3.1 already possesses deep semantic understanding of standard Hindi. QLoRA simply "steers" that existing knowledge toward Bangru syntax. 
 
-#### Example:
-
-
-Input: "तू कड़े जा रया सै?"
-Output: output.wav (placeholder)
-
-
----
-
-## 5. End-to-End Pipeline
-
-### System Flow
-
-
-Hindi Input
-↓
-Tokenizer
-↓
-LLaMA + QLoRA
-↓
-Haryanvi Text
-↓
-TTS Model
-↓
-Audio Output
-
+### Audio Module: Why VITS (over XTTS / FastPitch)?
+* **Suitability:** VITS features a *stochastic duration predictor*. Haryanvi (Bangru) exhibits aggressive syllabic compression and a flatter melodic variance compared to standard Hindi.
+* **Comparison (vs. FastSpeech2):** FastSpeech2 relies on deterministic (MSE) duration prediction, resulting in a robotic, metronomic cadence that ruins dialect authenticity. 
+* **Comparison (vs. XTTS):** Autoregressive models (XTTS/VALL-E) suffer from high inference latency and hallucinations. VITS provides real-time, end-to-end generation in a single forward pass without the compound errors of two-stage (FastPitch + Vocoder) pipelines.
 
 ---
 
-## 6. Input-Output Compatibility
+## 7. End-to-End Pipeline Verification (Tracer Bullet Execution)
+To verify component integration, we executed a "tracer bullet" run on a hyper-restricted dataset. 
 
-| Component | Format |
-|----------|--------|
-| Translation Output | Devanagari Text |
-| TTS Input | Normalized Haryanvi Text |
+**Module A Verification:**
+* Executed `SFTTrainer` on the dataset using a batch size of 4.
+* Loss decreased successfully from `0.094` to `0.090` over 3 epochs.
+* LoRA adapters merged and saved successfully.
 
-✔ Ensured consistent script and normalization across modules  
-
----
-
-### Input Shapes
-
-| Model | Shape |
-|------|------|
-| LLaMA | (batch_size, seq_len=128) |
-| TTS | Variable-length text |
+**Module B Verification:**
+* Streamed exactly 50 samples from the audio dataset to bypass API limits.
+* Executed the VITS Coqui `Trainer` loop for 1 epoch.
+* **Result:** The Generative Adversarial Network (GAN) loops stabilized, the phonemizer successfully parsed the Devanagari text, and an output checkpoint was successfully compiled without dimension mismatch errors.
 
 ---
 
-## 7. End-to-End Pipeline Verification
+## 8. Model Outputs & Examples
 
-A subset of the dataset was passed through the pipeline to validate integration.
+**Translation Execution (Actual Model Output):**
+* *Input:* `क्या तुम कल स्कूल जाओगे?`
+* *Model Output:* `क्या तुम कल स्कूल जाओगे।` *(Note: Requires further tuning on interrogatives).*
+* *Input:* `यह किताब मेरी है, इसे मत छूना`
+* *Model Output:* `या किताब मेरी सै, इसे न छूना।` *(Excellent dialect substitution).*
 
-### 🔍 Translation Model Output (Actual Run)
-
-![Model Output](hindi-to-haryanvi-text-conversion.jpeg)
-
-### Observations:
-
-- Correct lexical substitutions observed (e.g., “रहा हूँ” → “रया सै”)  
-- Sentence structure preserved  
-- Dialect transformation consistent  
-
----
-
-### Sample Outputs
-
-| Hindi Input | Model Output |
-|------------|------------|
-| मैं आज बाजार जा रहा हूँ | मैं आज बाजार जा रया सै। |
-| क्या तुम कल स्कूल जाओगे? | क्या तुम कल स्कूल जाओगे। |
-| यह किताब मेरी है, इसे मत छूना | या किताब मेरी सै, इसे न छूना। |
-
----
-
-### Pipeline Execution
-
-
-Hindi → Translation → Output → (Dummy) Audio Generation
-
-
-✔ All components executed successfully  
-✔ No format mismatch  
-✔ Pipeline verified  
-
----
-
-## 8. Model Outputs
-
-### Translation Example
-
-
-Input: मुझे पानी चाहिए
-Output: मन्ने पानी चाहिए
-
-
----
-
-### TTS Output (Dummy)
-
-
-Generated: output_1.wav
-Duration: ~2 sec (placeholder)
-
+**Pipeline Execution (Text-to-Audio Integration):**
+* Fed the generated string: `"मैं आज बाजार जा रया सै।"` into the newly initialized VITS checkpoint.
+* **Output Generated:** `test_haryanvi_output.wav`
+* *Status:* Waveform successfully generated. As expected from a 1-epoch/50-sample run, the fidelity is low, but it absolutely verifies the architectural math and pipeline bridging.
 
 ---
 
 ## 9. Loss Functions & Evaluation Metrics
 
-### Module A (Translation)
+### Module A (Text Translation)
+* **Loss Function:** Causal Language Modeling Loss (Standard Cross-Entropy).
+* **Metrics:** * **chrF++:** (Character n-gram F-score) Optimal for morphologically rich dialects like Haryanvi.
+    * **BLEU Score:** For exact lexical overlap.
 
-- Loss: Cross-Entropy Loss  
-- Metrics:
-  - BLEU Score  
-  - chrF++  
-  - Manual evaluation  
-
----
-
-### Module B (TTS)
-
-- Loss:
-  - Reconstruction Loss  
-  - KL Divergence  
-  - Adversarial Loss  
-
-- Metrics:
-  - MOS (Mean Opinion Score)  
-  - MCD (Mel-Cepstral Distortion)  
-  - WER  
+### Module B (Text-to-Speech)
+* **Loss Functions:** * *Generator:* Mel-spectrogram Reconstruction Loss (L1), KL-Divergence Loss (for duration alignment), Adversarial Loss, and Feature Matching Loss.
+    * *Discriminator:* Adversarial (Real vs. Fake) Loss.
+* **Metrics:**
+    * **MCD (Mel-Cepstral Distortion):** Measures the objective acoustic distance between synthesized and ground-truth audio.
+    * **MOS (Mean Opinion Score):** Human evaluation metric for naturalness and dialect accuracy.
 
 ---
 
-## 10. Architecture Justification
+## 10. Conclusion & Next Steps
+This milestone completely validates the structural integrity of the project. We have successfully bypassed Hugging Face dataset bottlenecks, resolved phonemizer incompatibilities, and verified that data flows perfectly from raw standard Hindi text all the way to a Haryanvi `.wav` file. 
 
-| Model | Reason |
-|------|--------|
-| LLaMA + QLoRA | Efficient and suitable for low-resource dialect modeling |
-| Synthetic Data | Required due to lack of real dataset |
-| VITS | End-to-end speech generation with prosody modeling |
-
----
-
-### Comparison with Alternatives
-
-| Model | Limitation |
-|------|-----------|
-| Google Translate | No dialect awareness |
-| Seq2Seq LSTM | Weak context modeling |
-| FastSpeech2 | Limited prosody flexibility |
-
----
-
-## 11. Strengths
-
-- End-to-end pipeline design  
-- Dialect-aware transformation  
-- Modular architecture  
-- Low-resource adaptability  
-
----
-
-## 12. Limitations
-
-- Limited real-world Haryanvi dataset  
-- TTS module not fully trained  
-- Dependency on synthetic data  
-
----
-
-## 13. Conclusion
-
-This milestone successfully delivers:
-
-- A well-defined **model architecture**  
-- Verified **end-to-end pipeline execution**  
-- Proper **data-model compatibility**
-
-The project is now ready for:
-
-➡️ Full-scale model training (Milestone 4)  
-➡️ Performance optimization and evaluation  
-
----
-
-## 14. References
-
-Refer Milestone 1 and Milestone 2 reports.
+**Next Steps for Milestone 4:**
+1.  Initiate full-scale training on Module B utilizing all 4,000 samples.
+2.  Implement strategic layer freezing for the VITS Text Encoder to preserve the Hindi base while fine-tuning the duration predictor.
+3.  Calculate quantitative metrics (BLEU/chrF++) for the text module.
