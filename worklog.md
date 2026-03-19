@@ -64,6 +64,35 @@ Deadline: 5 March 2026
 
 ---
 
+## **Milestone: 3 – Model Architecture & End-to-End Pipeline**
+
+Deadline: 19 March 2026  
+
+### Team Contributions
+
+#### **Abhishek** (22f3000978@ds.study.iitm.ac.in)
+- Designed Hindi → Haryanvi translation pipeline using LLaMA 3.1 + QLoRA  
+- Implemented instruction-based formatting and tokenizer integration  
+- Ran inference on subset data and validated outputs  
+- Ensured output compatibility for TTS module  
+
+#### **Satyam Srivastava** (21f1000629@ds.study.iitm.ac.in)
+- Created Milestone-3 report (model architecture + pipeline explanation)   
+- Updated worklog.md and managed final submission  
+
+#### **Sanket Agrawal** (23f1001709@ds.study.iitm.ac.in)
+- Verified dataset consistency with model input requirements  
+- Uploaded processed datasets to Hugging Face  
+- Assisted in pipeline testing and validation  
+- Prepared initial PPT structure for milestone presentation  
+
+#### **Md Fazlur Rahman** (23f1001897@ds.study.iitm.ac.in)
+- Designed TTS architecture (VITS-based)  
+- Defined audio preprocessing pipeline  
+- Structured dataset into TTS-ready format  
+ 
+
+---
 
 
 *This worklog file is updated regulary on each milestone.*
