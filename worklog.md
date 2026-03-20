@@ -77,7 +77,8 @@ Deadline: 19 March 2026
 - Ensured output compatibility for TTS module  
 
 #### **Satyam Srivastava** (21f1000629@ds.study.iitm.ac.in)
-- Created Milestone-3 report (model architecture + pipeline explanation)   
+- Created Milestone-3 report (model architecture + pipeline explanation)
+- Final PPT work   
 - Updated worklog.md and managed final submission  
 
 #### **Sanket Agrawal** (23f1001709@ds.study.iitm.ac.in)
@@ -88,8 +89,9 @@ Deadline: 19 March 2026
 
 #### **Md Fazlur Rahman** (23f1001897@ds.study.iitm.ac.in)
 - Designed TTS architecture (VITS-based)  
-- Defined audio preprocessing pipeline  
-- Structured dataset into TTS-ready format  
+- Defined audio preprocessing pipeline
+- LJSpeech format structuring  
+- End-to-end TTS pipeline implementation  
  
 
 ---
