@@ -96,5 +96,26 @@ Deadline: 19 March 2026
 
 ---
 
+## **Milestone: 4 – Model training and experiment with different hyperparameters, optimization, stategies and regulariation techniques.**
+
+Deadline: 29 March 2026  
+
+### Team Contributions
+
+#### **Abhishek** (22f3000978@ds.study.iitm.ac.in)
+- Complete end to end training of llama (text to text model part)
+
+#### **Satyam Srivastava** (21f1000629@ds.study.iitm.ac.in)
+- Handled Training of coqui-tts model on hardware 
+
+#### **Sanket Agrawal** (23f1001709@ds.study.iitm.ac.in)
+- helped with documentation 
+
+#### **Md Fazlur Rahman** (23f1001897@ds.study.iitm.ac.in)
+- wrote all codes for tts model 
+
+
+
+---
 
 *This worklog file is updated regulary on each milestone.*
