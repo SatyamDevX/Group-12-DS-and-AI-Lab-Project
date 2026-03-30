@@ -602,6 +602,7 @@ remaining 135 epochs, suggesting the feature matching loss had saturated and was
 
 All files, folders, datasets, and generated outputs referenced in this milestone can be found at the following links:
 * [🤗 Hugging Face Models & Datasets](https://huggingface.co/datasets/Satyam-Srivastava/RDS)
+* [🤗 Hugging Face Models](https://huggingface.co/Satyam-Srivastava/TTS_haryanvi_bangru_vits_based_model)
 * [📁 Part 1: Text-to-Text Translation (LLaMA) Outputs & Checkpoints](https://drive.google.com/drive/folders/1yVwT5XKXtM6Xqli2dRHfh970Lx6NRyTe)
 * [📁 Part 2: Text-to-Speech (VITS) Outputs & Checkpoints](https://drive.google.com/drive/folders/15ql9hOetrypRe19tqjZGY6WbHnhjdkIc)
 * [🔊 Generated Audio Samples (.wav files)](https://drive.google.com/drive/folders/1odheMukksl2s2ZWkC5uPSTBqqH0GnPes)
