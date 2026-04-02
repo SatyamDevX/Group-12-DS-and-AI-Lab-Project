@@ -114,7 +114,33 @@ Deadline: 29 March 2026
 #### **Md Fazlur Rahman** (23f1001897@ds.study.iitm.ac.in)
 - wrote all codes for tts model 
 
+---
 
+## **Milestone: 5 – Model Evaluation, Analysis and Performance Assessment**
+
+Deadline: 2 April 2026  
+
+### Team Contributions
+
+#### **Abhishek** (22f3000978@ds.study.iitm.ac.in)
+- Evaluated text-to-text (LLaMA) model performance
+- Analyzed translation metrics (BLEU, chrF, Exact Match)
+- Investigated evaluation pipeline issues
+
+#### **Satyam Srivastava** (21f1000629@ds.study.iitm.ac.in)
+- Evaluated TTS model performance using test samples and listen .wav audio files(Human evalution.)
+- Creating PPT
+- Integrated results into final report
+
+#### **Sanket Agrawal** (23f1001709@ds.study.iitm.ac.in)
+- Assisted in compiling evaluation results
+- Structured report formatting and tables
+- Helped organize qualitative and quantitative outputs
+
+#### **Md Fazlur Rahman** (23f1001897@ds.study.iitm.ac.in)
+- Conducted error analysis for TTS outputs
+- Identified limitations in speech synthesis
+- Supported analysis of model behavior and improvements
 
 ---
 
