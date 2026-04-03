@@ -231,7 +231,67 @@ Configuration details :
 
 ---
 
-## 11. Conclusion
+## 11. Qualitative Human Evaluation — Inference Samples
+
+Formal MOS and MUSHRA evaluations require a controlled panel of native Haryanvi listeners
+and were outside the scope of this milestone. In their place, a **self-evaluation of the
+synthesized inference samples** was conducted across eleven diverse test cases stored in
+`tts_output_wav_files/`, covering a range of sentence types and lengths.
+
+### 11.1 Sample Coverage
+
+| Sample | Type | Duration |
+|---|---|---|
+| `test_haryanvi_output.wav` | Complex multi-clause sentence | Short |
+| `test_haryanvi_output2.wav` | Short idiomatic Haryanvi phrase | Short |
+| `test_haryanvi_output3.wav` | Multi-line conversational passage | Medium |
+| `test_haryanvi_output4–11.wav` | Diverse topics — village life, weather, relationships | Short–Medium |
+| `test_haryanvi_outputfinal.wav` | Short narrative story | Medium |
+| `test_haryanvi_output5min.wav` | Long-form story: *Surta and the injured deer* | ~5 min |
+| `test_haryanvi_output5mintoughtest.wav` | Long-form dialogue-heavy story: *Raghubeeer and Munna* | ~5 min |
+
+### 11.2 Observations
+
+**Prosodic Naturalness:**
+Naturalness was noticeably better than expected at 300 epochs. The Hindi warm-start
+provided a strong prosodic prior that carried over well — rhythm, pacing, and sentence-level
+stress were largely convincing even on inputs the model had never seen.
+
+**Hindi Bias:**
+The most consistent failure pattern was lexical — the model occasionally produced words
+that were closer to standard Hindi than Haryanvi (e.g., *जा रहा है* instead of *जा रया सै*,
+*नहीं* instead of *कोनी*). This is an expected artifact of fine-tuning from a Hindi donor
+model on a small corpus; the decoder's Hindi acoustic priors are well-established and
+occasionally dominate over the Haryanvi-specific patterns learned during fine-tuning.
+
+**Complex Sentence Handling:**
+Multi-clause and multi-paragraph inputs were handled stably. The long-form stories
+(`output5min.wav`, `output5mintoughtest.wav`) completed without attention collapse or
+duration runaway — a meaningful result that confirms the model generalises beyond the
+short utterances it was trained on.
+
+**Short Sentences:**
+Short, idiomatic Haryanvi phrases produced the cleanest outputs. Duration prediction
+is most accurate on short inputs, resulting in natural-sounding delivery with minimal
+artifacts.
+
+### 11.3 Summary
+
+| Dimension | Assessment |
+|---|---|
+| Intelligibility | ✅ High across all samples |
+| Prosodic naturalness | ✅ Better than expected at 300 epochs |
+| Hindi lexical bias | ⚠️ Occasional — more prominent on formal or rare inputs |
+| Complex sentence stability | ✅ Attention and duration remained stable |
+| Short sentence quality | ✅ Strongest outputs in the sample set |
+| Dialogue / turn transitions | ⚠️ Minor duration artifacts at speaker-turn boundaries |
+
+Overall, the model produces speech that is **intelligible, reasonably natural, and clearly
+Haryanvi in character** for the majority of inputs. The primary gap from a production-ready
+system is the residual Hindi lexical bias, which is expected to reduce with extended training
+and a larger Haryanvi corpus.
+
+## 12. Conclusion
 
 The evaluation demonstrates that:
 
@@ -241,15 +301,6 @@ The evaluation demonstrates that:
 
 Overall, the system shows strong potential for **low-resource dialect AI applications**.
 
----
-
-## 12. Future Work
-
-* Fix evaluation pipeline issue
-* Increase dataset size
-* Introduce phoneme-based TTS
-* Improve handling of complex sentences
-* Add human evaluation (MOS)
 
 ---
 
