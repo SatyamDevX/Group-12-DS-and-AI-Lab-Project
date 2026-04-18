@@ -144,4 +144,42 @@ Deadline: 2 April 2026
 
 ---
 
+---
+
+## **Milestone: 6 – Deployment, Integration and Documentation**
+
+Deadline: 16 April 2026  
+
+### Team Contributions
+
+#### **Abhishek** (22f3000978@ds.study.iitm.ac.in)
+- Designed prompt engineering strategy for Gemma-based inference  
+- Supported transition from LLaMA to deployment-ready model  
+- Validated translation quality  
+
+#### **Satyam Srivastava** (21f1000629@ds.study.iitm.ac.in)
+- Structured final repository and project folders  
+- Created README and Milestone-6 report  
+- Designed final PPT (HTML → PDF)  
+- Integrated demo screenshots and documentation  
+
+#### **Sanket Agrawal** (23f1001709@ds.study.iitm.ac.in)
+- Assisted in system testing and validation  
+- Verified dataset and model consistency  
+- Supported documentation and presentation  
+
+#### **Md Fazlur Rahman** (23f1001897@ds.study.iitm.ac.in)
+- Developed FastAPI backend and integrated full pipeline  
+- Implemented async processing and model loading  
+- Built frontend interface and deployed on GCP VM  
+- Verified TTS integration and output quality  
+
+### **Milestone Summary**
+
+- Deployed end-to-end Hindi → Haryanvi → Speech system  
+- Integrated translation and TTS into a unified pipeline  
+- Delivered complete documentation, API, and demo  
+
+---
+
 *This worklog file is updated regulary on each milestone.*
