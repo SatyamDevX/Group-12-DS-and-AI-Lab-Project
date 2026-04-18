@@ -10,7 +10,7 @@ This project provides a complete, end-to-end machine learning pipeline that conv
 [Hindi Text Input]
       │
       ▼
-[Translation Model]      ← Translation Stage (LLaMA 3.1 8B or Gemma 4B)
+[Translation Model]      ← Translation Stage (Gemma 4B (GGUF via llama-cpp-python))
       │
       ▼
 [Haryanvi Text (Devanagari)]

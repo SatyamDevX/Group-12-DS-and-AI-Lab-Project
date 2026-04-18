@@ -1,299 +1,269 @@
-# 📘 Milestone 6 Report: Deployment & Documentation  
-### Regional Dialect Synthesis Pipeline (Hindi → Haryanvi → Speech)
+# 📘 Milestone 6 Report
+
+## Deployment & Documentation
+
+### Regional Dialect Synthesis Pipeline
 
 ---
 
 ## 1. Overview
 
-Milestone 6 focuses on transforming the developed pipeline into a **deployable, reproducible, and user-accessible system**.
+This milestone converts the trained models into a **deployable, reproducible AI system**.
 
 ### Objective
-To deploy and document an end-to-end pipeline that:
-- Translates Hindi text → Haryanvi dialect
-- Converts Haryanvi text → natural speech audio
 
-### Final Pipeline
-1. **Text-to-Text Translation**
-   - Model: LLaMA 3.1 8B (QLoRA fine-tuned)
-   - Task: Hindi → Haryanvi
-
-2. **Text-to-Speech (TTS)**
-   - Model: Coqui VITS
-   - Task: Haryanvi → Speech waveform
+* Input: Hindi text
+* Output: Haryanvi speech
 
 ---
 
-## 2. Deployment
+## 2. System Evolution (IMPORTANT)
 
-### 2.1 Deployment Type
-- Local deployment using:
-  - **Streamlit App (Frontend)**
-  - **Python Backend (Model Inference)**
+### Model Transition (Research → Deployment)
+
+Initially, a LLaMA 3.1 model was fine-tuned using QLoRA on 5,594 Hindi–Haryanvi pairs.  
+While the model achieved strong translation quality, it suffered from:
+
+- High inference latency  
+- Large memory footprint  
+
+To enable real-time deployment, the system was redesigned:
+
+- Replaced LLaMA inference with Gemma GGUF model  
+- Applied prompt engineering with few-shot examples  
+- Achieved faster inference while maintaining acceptable dialect quality  
+
+This transition highlights a key engineering tradeoff between model accuracy and deployment feasibility.
+
+### Phase 1 — Training
+
+* Model: LLaMA 3.1 (QLoRA)
+* Dataset: 5,594 parallel pairs
+* Outcome: High-quality translation
+
+
+### Problem
+
+* High latency
+* Large model size
 
 ---
 
-### 2.2 Application Workflow
+### Phase 2 — Deployment Optimization
 
-User Input (Hindi Text)  
-↓  
-Translation Model (LLaMA)  
-↓  
-Haryanvi Text Output  
-↓  
-TTS Model (VITS)  
-↓  
-Generated Speech (Audio)
+* Switched to **Gemma GGUF**
+* Used **prompt engineering**
+* Added **few-shot examples**
+
+### Result
+
+* Faster inference
+* Production-ready system
 
 ---
 
-### 2.3 How to Run (Local)
+## 3. Final Architecture
 
-```bash
-# Clone repository
-git clone <repo-url>
-
-# Navigate
-cd project
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run app
-streamlit run app/app.py
+```id="arch2"
+Hindi Input
+   ↓
+Gemma (Prompt-based Translation)
+   ↓
+Haryanvi Text
+   ↓
+VITS Model
+   ↓
+Audio Output
 ```
 
 ---
 
-### 2.4 Input & Output
+## 4. Deployment Details
 
-| Type   | Description |
-|--------|------------|
-| Input  | Hindi text sentence |
-| Output | Haryanvi text + generated speech (.wav) |
+### 4.1 Platform
+
+* GCP Virtual Machine
+* FastAPI backend
+* Uvicorn server
 
 ---
 
-## 3. Technical Documentation
+### 4.2 System Components
 
-### 3.1 Environment Setup
+| Component | Description       |
+| --------- | ----------------- |
+| Frontend  | Static HTML       |
+| Backend   | FastAPI           |
+| Models    | Local GGUF + VITS |
+| Storage   | Local filesystem  |
 
-| Component    | Specification |
-|--------------|--------------|
-| Python       | 3.12 |
-| PyTorch      | 2.10 |
-| Transformers | 5.0 |
-| PEFT         | 0.18 |
-| TTS Library  | Coqui TTS |
-| GPU          | NVIDIA A100 / T4 |
+---
 
-Install:
-```bash
+### 4.3 Running the System
+
+```bash id="run2"
 pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ---
 
-### 3.2 Data Pipeline
+## 5. API Design
 
-#### Translation Dataset
-- ~5000 Hindi–Haryanvi sentence pairs
-- Cleaned and tokenized
-- Instruction formatted
+### Endpoints
 
-#### TTS Dataset
-- Dataset: `ankitdhiman/haryanvi-tts`
-- ~5500 samples
-- Converted to LJSpeech format
-
----
-
-### 3.3 Model Architecture
-
-#### Translation
-- LLaMA 3.1 8B with QLoRA fine-tuning
-- Low-rank adaptation for efficiency
-
-#### TTS
-- VITS architecture:
-  - Variational Autoencoder + GAN
-  - End-to-end waveform generation
+| Endpoint               | Function             |
+| ---------------------- | -------------------- |
+| `/health`              | Status               |
+| `/api/translate`       | Hindi → Haryanvi     |
+| `/api/tts`             | Text → Speech        |
+| `/api/pipeline`        | Full pipeline        |
+| `/api/pipeline/base64` | Full pipeline (JSON) |
 
 ---
 
-### 3.4 Training Summary (From Milestone 4)
+## 6. Inference Pipeline
 
-- Optimizer: AdamW  
-- Precision: BF16  
-- Best config: **lower_lr_longer**  
-- Stable convergence achieved  
-
----
-
-### 3.5 Evaluation Summary (From Milestone 5)
-
-| Metric | Value |
-|--------|------|
-| BLEU   | 71.76 |
-| chrF   | 77.65 |
-| Exact Match | 50.42% |
-
----
-
-### 3.6 Inference Pipeline
-
-```python
+```python id="pipe1"
 def pipeline(text):
-    haryanvi_text = translate_model(text)
-    audio = tts_model(haryanvi_text)
-    return haryanvi_text, audio
+    haryanvi = translate(text)
+    audio = synthesize(haryanvi)
+    return haryanvi, audio
 ```
 
 ---
 
-### 3.7 Deployment Details
+## 7. Implementation Highlights
 
-| Component | Description |
-|----------|------------|
-| Frontend | Streamlit UI |
-| Backend  | Python inference pipeline |
-| Model Hosting | Local (can extend to cloud) |
+### 7.1 Background Model Loading
 
----
+* Models load in separate thread
+* Server starts instantly
 
-### 3.8 System Design Considerations
+### 7.2 Async Execution
 
-- Modular pipeline (translation + TTS separated)
-- Scalable to other dialects
-- Lightweight inference using QLoRA
-- Reusable components
+* Uses `asyncio` + thread executor
+* Prevents blocking
 
----
+### 7.3 Error Handling
 
-### 3.9 Error Handling & Monitoring
+* 503 → models loading
+* 400 → invalid input
+* 500 → model failure
 
-- Input validation (empty text)
-- Max length checks
-- Exception handling for model loading
-- Logging for debugging
+(Implemented in FastAPI backend )
 
 ---
 
-### 3.10 Reproducibility Checklist
+## 8. Technical Details
 
-- Fixed random seeds
-- Saved model checkpoints
-- Dataset versioning
-- requirements.txt provided
+## Dataset Summary
 
----
+- Text Dataset: 5,594 Hindi–Haryanvi sentence pairs  
+- Audio Dataset: ~5,500 Haryanvi speech samples  
 
-## 4. User Documentation
+These datasets were used for training the translation and TTS models respectively.
 
-### 4.1 App Overview
-A simple interface that converts Hindi sentences into spoken Haryanvi audio.
+### Translation
 
----
+* Initial model: LLaMa 
+* Delployed Model: Gemma GGUF
+* Method: Prompt engineering
 
-### 4.2 Steps to Use
+### TTS
 
-1. Launch the app  
-2. Enter Hindi text  
-3. Click **Generate**  
-4. View:
-   - Translated Haryanvi text  
-   - Audio playback  
+* Model: Coqui VITS
+* Checkpoint: best_model_16731.pth
 
 ---
 
-### 4.3 Example
+## 9. Reproducibility
+
+* requirements.txt
+* local model checkpoints
+* consistent API interface
+
+---
+
+## 10. Example
 
 Input:
-```
+
+```id="ex3"
 तुम कहाँ जा रहे हो?
 ```
 
 Output:
-```
+
+```id="ex4"
 तू कड़े जा रया सै?
 (Audio generated)
 ```
 
 ---
 
-### 4.4 Troubleshooting
+## 11. Results
 
-| Issue | Solution |
-|------|---------|
-| App not loading | Check dependencies |
-| No audio | Verify TTS model path |
-| Slow response | Use GPU |
+### Translation
 
----
+* Captures dialect variations
+* Some Hindi bias remains
 
-## 5. API Documentation (Optional)
+### TTS
 
-### Endpoint
-
-```
-POST /predict
-```
-
-### Request
-
-```json
-{
-  "text": "तुम कहाँ जा रहे हो?"
-}
-```
-
-### Response
-
-```json
-{
-  "haryanvi_text": "तू कड़े जा रया सै?",
-  "audio_path": "output.wav"
-}
-```
+* Generates valid waveform
+* Naturalness improving
 
 ---
 
-## 6. Licensing & Dataset References
+## Performance Considerations
 
-- Code License: MIT  
-- Dataset:
-  - Hindi–Haryanvi corpus (custom)
-  - `ankitdhiman/haryanvi-tts` (Hugging Face)
-
----
-
-## 7. Future Work
-
-### Improvements
-- Increase dataset size  
-- Reduce Hindi lexical bias  
-- Add phoneme-based modeling  
-
-### Extensions
-- Multi-dialect support  
-- Real-time speech input  
-- Mobile app integration  
-
-### Limitations
-- Small dataset (~5K samples)  
-- Occasional translation errors  
-- TTS prosody limitations  
+- LLaMA inference was slow (seconds per request)
+- Gemma GGUF reduced latency significantly
+- Background model loading prevents server blocking
+- Async API ensures non-blocking request handling
 
 ---
 
-## 8. Conclusion
+## Frontend–Backend Interaction
 
-Milestone 6 successfully delivers:
+- User enters Hindi text in HTML interface
+- Request sent to FastAPI backend
+- Backend processes:
+  1. Translation
+  2. TTS synthesis
+- Response returned as audio or JSON
 
-- A **working deployment** of the pipeline  
-- **Comprehensive technical documentation**  
-- A **user-friendly interface**  
+---
 
-The system demonstrates strong potential for:
-- Low-resource dialect AI  
-- Speech synthesis applications  
-- Regional language preservation  
+## 12. Limitations
+
+- Translation still shows Hindi influence in some cases  
+- TTS prosody not fully natural  
+- Limited dataset size affects generalization  
+
+## 13. Challenges
+
+* Low-resource dataset
+* Dialect ambiguity
+* TTS prosody issues
+
+---
+
+## 14. Future Work
+
+* Larger dataset
+* Fine-tune Gemma
+* Improve TTS quality
+
+---
+
+## 15. Conclusion
+
+This milestone successfully delivers:
+
+* Deployable AI system
+* End-to-end pipeline
+* Real-time inference
+
+The project demonstrates a practical solution for **low-resource dialect synthesis**.

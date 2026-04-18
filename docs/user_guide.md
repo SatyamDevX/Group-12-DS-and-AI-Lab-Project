@@ -12,9 +12,9 @@ source ~/hindi-haryanvi-tts-vm/venv/bin/activate
 **Step 2: Export environment variables**
 Run these commands before opening your screen session so the background processes inherit them:
 ```bash
-export LLM_BASE_MODEL_ID=/model_weights/llm/base
-export TTS_CHECKPOINT=/model_weights/tts/best_model_16731.pth
-export TTS_CONFIG=model_weights/tts/config.json
+export LLM_BASE_MODEL_ID=./model_weights/llm/base
+export TTS_CHECKPOINT=./model_weights/tts/best_model_16731.pth
+export TTS_CONFIG=.model_weights/tts/config.json
 export DEVICE=cpu
 export LLM_LOAD_IN_4BIT=false
 export HF_HUB_OFFLINE=1
