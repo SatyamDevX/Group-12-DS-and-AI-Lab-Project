@@ -113,6 +113,7 @@ modal secret create hindi-haryanvi-secrets \
   LLM_MAX_NEW_TOKENS=64 \
   LLM_LORA_BASE_MODEL_ID=meta-llama/Meta-Llama-3.1-8B-Instruct \
   LLM_LORA_ADAPTER_ID=Satyam-Srivastava/hindi-to-haryanvi-translation-llama3-qlora \
+  LLM_LORA_SYSTEM_PROMPT="You are a precise Hindi to Haryanvi (Bangru) translator. Convert the standard Hindi input into grammatically correct Haryanvi. Follow systematic lexical substitutions and morpho-syntactic rules." \
   TTS_BACKEND=vits \
   TTS_REPO_ID=your-org/haryanvi-vits \
   TTS_CHECKPOINT_FILENAME=best_model_16731.pth \
@@ -129,6 +130,9 @@ llama_lora -> meta-llama/Meta-Llama-3.1-8B-Instruct + Satyam-Srivastava adapter
 The LoRA option is loaded lazily on first use. Because the base LLaMA model is
 gated, add `HF_TOKEN` to the Modal secret and make sure the token has access to
 `meta-llama/Meta-Llama-3.1-8B-Instruct`.
+
+The LoRA inference path uses the same chat shape from `rds_llama_finetune.ipynb`:
+system prompt plus the raw Hindi sentence as the user message.
 
 After you fine-tune XTTS-v2 and upload it, switch the TTS settings to:
 

@@ -68,9 +68,11 @@ class ModelConfig:
         "LLM_LORA_ADAPTER_ID",
         "Satyam-Srivastava/hindi-to-haryanvi-translation-llama3-qlora",
     )
-    LLM_LORA_PROMPT_TEMPLATE: str = os.getenv(
-        "LLM_LORA_PROMPT_TEMPLATE",
-        "Translate Hindi to Haryanvi: {text}",
+    LLM_LORA_SYSTEM_PROMPT: str = os.getenv(
+        "LLM_LORA_SYSTEM_PROMPT",
+        "You are a precise Hindi to Haryanvi (Bangru) translator. "
+        "Convert the standard Hindi input into grammatically correct Haryanvi. "
+        "Follow systematic lexical substitutions and morpho-syntactic rules.",
     )
 
     LLM_PROMPT_TEMPLATE: str = os.getenv(

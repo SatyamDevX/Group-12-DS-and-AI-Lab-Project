@@ -23,6 +23,7 @@ class LoadedTranslator:
     model: Any
     tokenizer: Any = None
     prompt_template: str | None = None
+    system_prompt: str | None = None
 
 
 TRANSLATION_MODEL_LABELS = {
@@ -169,7 +170,7 @@ def load_translator(model_key: str | None = None) -> LoadedTranslator:
             model=model,
         )
 
-    tokenizer = _load_hf_tokenizer(ModelConfig.LLM_LORA_BASE_MODEL_ID)
+    tokenizer = _load_hf_tokenizer(ModelConfig.LLM_LORA_BASE_MODEL_ID, padding_side="right")
     model = _load_hf_lora_model(
         base_model_id=ModelConfig.LLM_LORA_BASE_MODEL_ID,
         adapter_id=ModelConfig.LLM_LORA_ADAPTER_ID,
@@ -180,7 +181,7 @@ def load_translator(model_key: str | None = None) -> LoadedTranslator:
         backend="hf_lora",
         model=model,
         tokenizer=tokenizer,
-        prompt_template=ModelConfig.LLM_LORA_PROMPT_TEMPLATE,
+        system_prompt=ModelConfig.LLM_LORA_SYSTEM_PROMPT,
     )
 
 
@@ -233,13 +234,13 @@ def load_tokenizer() -> Any:
     return _load_hf_tokenizer(ModelConfig.LLM_HF_BASE_MODEL_ID)
 
 
-def _load_hf_tokenizer(base_model_id: str) -> Any:
+def _load_hf_tokenizer(base_model_id: str, padding_side: str = "left") -> Any:
     from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(base_model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "left"
+    tokenizer.padding_side = padding_side
     return tokenizer
 
 
@@ -347,6 +348,7 @@ def translate_with_translator(text: str, translator: LoadedTranslator) -> str:
         translator.model,
         translator.tokenizer,
         prompt_template=translator.prompt_template,
+        system_prompt=translator.system_prompt,
     )
 
 
@@ -375,13 +377,24 @@ def _translate_hf_lora(
     model: Any,
     tokenizer: Any,
     prompt_template: str | None = None,
+    system_prompt: str | None = None,
 ) -> str:
     if tokenizer is None:
         raise RuntimeError("Tokenizer is required for LLM_BACKEND=hf_lora")
 
     import torch
 
-    prompt = (prompt_template or ModelConfig.LLM_PROMPT_TEMPLATE).format(text=text.strip())
+    if system_prompt:
+        prompt = tokenizer.apply_chat_template(
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text.strip()},
+            ],
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    else:
+        prompt = (prompt_template or ModelConfig.LLM_PROMPT_TEMPLATE).format(text=text.strip())
     device = next(model.parameters()).device
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
     gen_kwargs = dict(
