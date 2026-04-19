@@ -1,6 +1,5 @@
-# CHANGED: monkey-patch kept — still needed because coqui-tts imports
-# isin_mps_friendly from transformers.pytorch_utils which was removed in
-# transformers 5.x. This runs before any TTS import.
+# Compatibility shim for Coqui TTS/Transformers combinations where
+# isin_mps_friendly is not exported. This runs before any TTS import.
 from transformers import pytorch_utils as _pu
 import torch
 if not hasattr(_pu, "isin_mps_friendly"):

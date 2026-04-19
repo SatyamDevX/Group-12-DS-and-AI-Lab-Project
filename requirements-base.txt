@@ -6,8 +6,9 @@
 fastapi
 uvicorn[standard]
 
-# Model artifact downloads from Hugging Face.
-huggingface_hub==1.11.0
+# Model artifact downloads from Hugging Face. Transformers 4.x requires
+# huggingface_hub < 1.0.
+huggingface_hub>=0.34.0,<1.0
 
 # TTS inference.
 coqui-tts==0.27.5
@@ -17,8 +18,8 @@ soundfile==0.13.1
 torch==2.4.0
 torchaudio==2.4.0
 
-# Required by app/main.py for the Coqui compatibility monkey patch and by
-# optional XTTS/model-loading code paths.
-transformers==5.5.4
+# Transformers 5.x expects newer PyTorch module APIs such as set_submodule.
+# Keep this on 4.x while runtime torch is pinned to 2.4.0.
+transformers==4.57.6
 sentencepiece==0.2.1
 safetensors==0.7.0
