@@ -62,8 +62,8 @@ image = (
         "--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 "
         "llama-cpp-python==0.3.20"
     )
-    .add_local_dir("app", remote_path="/root/app/app")
     .workdir("/root/app")
+    .add_local_dir("app", remote_path="/root/app/app")
 )
 
 
