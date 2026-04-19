@@ -1,0 +1,18 @@
+.git
+.codex
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+env/
+
+# Keep image builds small. The container downloads models from Hugging Face.
+model_weights/
+
+audio_outputs/
+*.wav

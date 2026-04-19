@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+env/
+
+.env
+.codex
+
+# Keep large model artifacts in Hugging Face or external storage.
+model_weights/
+
+audio_outputs/
+*.wav

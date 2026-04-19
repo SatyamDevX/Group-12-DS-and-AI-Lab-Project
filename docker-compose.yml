@@ -1,0 +1,17 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    volumes:
+      - hf-cache:/cache/huggingface
+      - audio-cache:/tmp/audio_outputs
+    restart: unless-stopped
+
+volumes:
+  hf-cache:
+  audio-cache:
