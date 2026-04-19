@@ -113,15 +113,20 @@ def _get_translator(model_key: str | None):
     with _translator_registry_lock:
         if key not in _translators:
             logger.info("Lazy loading translation model: %s", key)
-            _translators[key] = load_translator(key)
+            translator = load_translator(key)
+            _translators[key] = translator
             _translator_locks[key] = threading.Lock()
         return key, _translators[key], _translator_locks[key]
 
 
 def _translate_locked(text: str, model_key: str | None = None) -> tuple[str, str]:
-    key, translator, lock = _get_translator(model_key)
-    with lock:
-        return translate_with_translator(text, translator), key
+    try:
+        key, translator, lock = _get_translator(model_key)
+        with lock:
+            return translate_with_translator(text, translator), key
+    except Exception:
+        logger.exception("Translation failed for model=%s", model_key)
+        raise
 
 
 def _synthesize_locked(text: str, output_path: str) -> str:
@@ -181,9 +186,12 @@ async def translate_endpoint(req: TextIn):
         raise HTTPException(400, "Input text is empty.")
     loop = asyncio.get_running_loop()
 
-    haryanvi, model_key = await loop.run_in_executor(
-        None, _translate_locked, req.text, req.translation_model
-    )
+    try:
+        haryanvi, model_key = await loop.run_in_executor(
+            None, _translate_locked, req.text, req.translation_model
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"Translation failed: {exc}") from exc
     return {"hindi": req.text, "haryanvi": haryanvi, "translation_model": model_key}
 
 
@@ -263,9 +271,12 @@ async def pipeline(req: TextIn):
         raise HTTPException(400, "Input text is empty.")
     loop = asyncio.get_running_loop()
 
-    haryanvi, model_key = await loop.run_in_executor(
-        None, _translate_locked, req.text, req.translation_model
-    )
+    try:
+        haryanvi, model_key = await loop.run_in_executor(
+            None, _translate_locked, req.text, req.translation_model
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"Translation failed: {exc}") from exc
 
     _cleanup_old_audio()
     audio_id = str(uuid.uuid4())
@@ -299,9 +310,12 @@ async def pipeline_base64(req: TextIn):
         raise HTTPException(400, "Input text is empty.")
     loop = asyncio.get_running_loop()
 
-    haryanvi, model_key = await loop.run_in_executor(
-        None, _translate_locked, req.text, req.translation_model
-    )
+    try:
+        haryanvi, model_key = await loop.run_in_executor(
+            None, _translate_locked, req.text, req.translation_model
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"Translation failed: {exc}") from exc
     _cleanup_old_audio()
     audio_id = str(uuid.uuid4())
     path = ModelConfig.TMP_AUDIO_DIR / f"{audio_id}.wav"
