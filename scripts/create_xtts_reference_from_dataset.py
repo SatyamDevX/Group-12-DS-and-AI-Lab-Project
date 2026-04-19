@@ -57,6 +57,10 @@ def _score_row(row: dict, text_column: str) -> tuple[int, int]:
     return punctuation_penalty, length_score
 
 
+def _row_text_length(row: dict[str, str], text_column: str) -> int:
+    return len(str(row.get(text_column) or "").strip())
+
+
 def _metadata_rows(metadata_path: Path) -> list[dict[str, str]]:
     with metadata_path.open("r", encoding="utf-8-sig", newline="") as handle:
         sample = handle.read(4096)
@@ -110,14 +114,27 @@ def create_reference(args: argparse.Namespace) -> Path:
     if not rows:
         raise RuntimeError(f"No rows found in {metadata_file}.")
 
-    best_row = None
-    best_score = None
-    best_audio_path = None
-    checked = 0
+    candidates = []
+    skipped_missing_audio = 0
     for row in rows:
         audio_path = _row_audio_path(row, audio_files)
         if not audio_path:
+            skipped_missing_audio += 1
             continue
+        text_len = _row_text_length(row, args.text_column)
+        if text_len < args.min_text_chars:
+            continue
+        candidates.append((_score_row(row, args.text_column), row, audio_path))
+
+    if not candidates:
+        raise RuntimeError(
+            "No metadata rows matched the text/audio filters. "
+            f"Rows without matching audio: {skipped_missing_audio}."
+        )
+
+    candidates.sort(key=lambda item: item[0])
+    checked = 0
+    for _, row, audio_path in candidates[: args.max_scan]:
         checked += 1
         candidate_path = Path(
             hf_hub_download(
@@ -132,30 +149,24 @@ def create_reference(args: argparse.Namespace) -> Path:
             continue
 
         if args.min_seconds <= duration <= args.max_seconds:
-            score = _score_row(row, args.text_column)
-            if best_score is None or score < best_score:
-                best_row = row
-                best_score = score
-                best_audio_path = candidate_path
-                _copy_reference(candidate_path, args.output)
-                if checked >= args.min_scan and score[0] == 0:
-                    break
-        if checked >= args.max_scan:
-            break
+            _copy_reference(candidate_path, args.output)
+            text = str(row.get(args.text_column) or "").strip()
+            print(f"Wrote {args.output}")
+            print(f"Source file: {audio_path}")
+            print(f"Duration: {duration:.2f}s")
+            if text:
+                print(f"Text: {text}")
+            return args.output
 
-    if best_row is None or best_audio_path is None:
-        raise RuntimeError(
-            f"No clip found between {args.min_seconds} and {args.max_seconds} "
-            f"seconds after scanning {checked} rows."
+        print(
+            f"Skipping {audio_path}: {duration:.2f}s outside "
+            f"{args.min_seconds}-{args.max_seconds}s"
         )
 
-    duration = _duration_seconds(args.output)
-    text = str(best_row.get(args.text_column) or "").strip()
-    print(f"Wrote {args.output}")
-    print(f"Duration: {duration:.2f}s")
-    if text:
-        print(f"Text: {text}")
-    return args.output
+    raise RuntimeError(
+        f"No clip found between {args.min_seconds} and {args.max_seconds} "
+        f"seconds after downloading {checked} top-ranked candidates."
+    )
 
 
 def _resolve_namespace(api: HfApi, token: str | None, namespace: str | None) -> str:
@@ -204,8 +215,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--text-column", default="text")
     parser.add_argument("--min-seconds", type=float, default=8.0)
     parser.add_argument("--max-seconds", type=float, default=13.0)
-    parser.add_argument("--min-scan", type=int, default=100)
-    parser.add_argument("--max-scan", type=int, default=2000)
+    parser.add_argument("--min-text-chars", type=int, default=110)
+    parser.add_argument("--max-scan", type=int, default=40)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--upload", action="store_true")
     parser.add_argument("--namespace", default=os.getenv("HF_NAMESPACE"))
