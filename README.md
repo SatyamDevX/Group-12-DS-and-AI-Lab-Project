@@ -75,6 +75,82 @@ LLM_HF_BASE_MODEL_ID=meta-llama/Meta-Llama-3.1-8B-Instruct
 LLM_HF_ADAPTER_ID=your-org/hindi-haryanvi-lora
 ```
 
+## Modal GPU Deployment
+
+For limited live demos with free Modal credits, use Modal for the heavy model
+container. This repo includes [modal_app.py](modal_app.py), which serves the
+existing FastAPI app on an L4 GPU and caches Hugging Face downloads in a Modal
+Volume.
+
+Recommended architecture:
+
+```text
+Modal = model inference endpoint
+Railway = optional public frontend / lightweight wrapper
+```
+
+For the fastest college demo, deploying the full app on Modal is fine:
+
+```bash
+pip install modal
+modal setup
+```
+
+Create the Modal secret used by `modal_app.py`:
+
+```bash
+modal secret create hindi-haryanvi-secrets \
+  HF_TOKEN=hf_xxx \
+  LLM_BACKEND=gguf \
+  LLM_GGUF_REPO_ID=your-org/hindi-haryanvi-gguf \
+  LLM_GGUF_FILENAME=your-model.Q4_K_S.gguf \
+  LLM_GGUF_CHAT_FORMAT=gemma \
+  LLM_GGUF_N_GPU_LAYERS=-1 \
+  LLM_MAX_NEW_TOKENS=64 \
+  TTS_BACKEND=xtts \
+  XTTS_REPO_ID=your-org/haryanvi-xtts-v2 \
+  XTTS_CHECKPOINT_FILENAME=model.pth \
+  XTTS_CONFIG_FILENAME=config.json \
+  XTTS_VOCAB_FILENAME=vocab.json \
+  XTTS_SPEAKER_WAV_FILENAME=reference.wav \
+  XTTS_LANGUAGE=hi \
+  COQUI_TOS_AGREED=1
+```
+
+Deploy:
+
+```bash
+modal deploy modal_app.py
+```
+
+Modal prints a URL like:
+
+```text
+https://<workspace>--hindi-haryanvi-tts-api.modal.run
+```
+
+Useful endpoints:
+
+```bash
+curl https://<workspace>--hindi-haryanvi-tts-api.modal.run/health
+
+curl -X POST https://<workspace>--hindi-haryanvi-tts-api.modal.run/api/pipeline/base64 \
+  -H "Content-Type: application/json" \
+  -d '{"text":"आज बहुत गर्मी है"}'
+```
+
+Credit-saving defaults in `modal_app.py`:
+
+```text
+GPU: L4
+min_containers: 0
+max_containers: 1
+scaledown_window: 5 minutes
+```
+
+For lower cost but slower inference, change `gpu="L4"` to `gpu="T4"` in
+`modal_app.py`. For faster inference that uses credits faster, use `gpu="A10G"`.
+
 ## Model Loading
 
 Model selection is controlled by environment variables. The default mode uses
