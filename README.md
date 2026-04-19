@@ -202,6 +202,8 @@ notebooks/          → training pipelines
 
 ## 📸 Demo
 
+### watch the full project demo [here](https://drive.google.com/file/d/1m1suZFmcNE6YwRr2iYeAS0H9aaIfgV1i/view)
+
 ![Pipeline](assets/full-pipeline-working.jpg)
 ![Translation](assets/translate.jpg)
 
