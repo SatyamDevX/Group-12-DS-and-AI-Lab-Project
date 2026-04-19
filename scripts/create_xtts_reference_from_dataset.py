@@ -74,7 +74,16 @@ def _metadata_rows(metadata_path: Path) -> list[dict[str, str]]:
 
 
 def _row_audio_path(row: dict[str, str], audio_files: set[str]) -> str | None:
-    for key in ("filepath", "file_path", "file_name", "filename", "path", "audio"):
+    for key in (
+        "filepath",
+        "file_path",
+        "file_name",
+        "filename",
+        "path",
+        "audio_path",
+        "audio",
+        "speech",
+    ):
         value = (row.get(key) or "").strip()
         if value:
             normalized = value.replace("\\", "/")
