@@ -7,4 +7,4 @@
 
 # GGUF inference. For local CPU/Docker installs, pip builds or installs the
 # default llama-cpp-python wheel. Modal installs this separately with CUDA flags.
-llama-cpp-python
+llama-cpp-python==0.3.20

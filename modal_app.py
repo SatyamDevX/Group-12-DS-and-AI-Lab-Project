@@ -54,10 +54,13 @@ image = (
     )
     .pip_install("modal")
     .pip_install_from_requirements("requirements-modal.txt")
-    # Install llama-cpp-python once with CUDA support so GGUF layers can run on GPU.
+    # Install the prebuilt CUDA 12.4 wheel. Building llama-cpp-python from
+    # source on Modal is slow and can fail during nvcc compilation.
     .run_commands(
-        'CC=gcc CXX=g++ CMAKE_ARGS="-DGGML_CUDA=on" FORCE_CMAKE=1 '
-        "python -m pip install --force-reinstall --no-cache-dir llama-cpp-python"
+        "python -m pip install --no-cache-dir --prefer-binary "
+        "--only-binary=llama-cpp-python "
+        "--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 "
+        "llama-cpp-python==0.3.20"
     )
     .add_local_dir("app", remote_path="/root/app/app")
     .workdir("/root/app")
