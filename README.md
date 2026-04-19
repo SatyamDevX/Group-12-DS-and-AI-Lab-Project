@@ -32,6 +32,8 @@ LLM_BACKEND=gguf
 LLM_GGUF_REPO_ID=your-org/hindi-haryanvi-gguf
 LLM_GGUF_FILENAME=gemma-4-E4B-it-Q4_K_S.gguf
 TTS_BACKEND=xtts
+TTS_MODELS=vits,xtts
+DEFAULT_TTS_MODEL=xtts
 XTTS_LOADER=api
 XTTS_REPO_ID=coqui/XTTS-v2
 XTTS_CHECKPOINT_FILENAME=model.pth
@@ -49,6 +51,8 @@ For the original VITS model instead of XTTS:
 
 ```bash
 TTS_BACKEND=vits
+TTS_MODELS=vits,xtts
+DEFAULT_TTS_MODEL=vits
 TTS_REPO_ID=your-org/haryanvi-vits
 TTS_CHECKPOINT_FILENAME=best_model_16731.pth
 TTS_CONFIG_FILENAME=config.json
@@ -120,6 +124,8 @@ modal secret create hindi-haryanvi-secrets \
   LLM_LORA_ADAPTER_ID=Satyam-Srivastava/hindi-to-haryanvi-translation-llama3-qlora \
   LLM_LORA_SYSTEM_PROMPT="You are a precise Hindi to Haryanvi (Bangru) translator. Convert the standard Hindi input into grammatically correct Haryanvi. Follow systematic lexical substitutions and morpho-syntactic rules." \
   TTS_BACKEND=vits \
+  TTS_MODELS=vits,xtts \
+  DEFAULT_TTS_MODEL=vits \
   TTS_REPO_ID=your-org/haryanvi-vits \
   TTS_CHECKPOINT_FILENAME=best_model_16731.pth \
   TTS_CONFIG_FILENAME=config.json
@@ -130,6 +136,13 @@ The frontend includes a translation model dropdown:
 ```text
 gemma_gguf -> your uploaded Gemma GGUF model
 llama_lora -> meta-llama/Meta-Llama-3.1-8B-Instruct + Satyam-Srivastava adapter
+```
+
+It also includes a speech model dropdown:
+
+```text
+vits -> your uploaded Haryanvi VITS checkpoint
+xtts -> coqui/XTTS-v2 now, later your fine-tuned XTTS-v2 HF repo
 ```
 
 The LoRA option is loaded lazily on first use. Because the base LLaMA model is
@@ -159,6 +172,8 @@ modal secret create hindi-haryanvi-secrets \
   LLM_GGUF_N_GPU_LAYERS=-1 \
   LLM_MAX_NEW_TOKENS=64 \
   TTS_BACKEND=xtts \
+  TTS_MODELS=vits,xtts \
+  DEFAULT_TTS_MODEL=xtts \
   XTTS_LOADER=api \
   XTTS_REPO_ID=coqui/XTTS-v2 \
   XTTS_CHECKPOINT_FILENAME=model.pth \
@@ -383,6 +398,8 @@ export DEVICE=auto                  # auto, cpu, or cuda
 export LLM_MAX_NEW_TOKENS=256
 export LLM_TEMPERATURE=0.1
 export TTS_BACKEND=xtts             # vits or xtts
+export TTS_MODELS=vits,xtts         # frontend/API speech choices
+export DEFAULT_TTS_MODEL=xtts
 export XTTS_LOADER=api              # api or native
 export TMP_AUDIO_DIR=/tmp/audio_outputs
 export TMP_AUDIO_MAX_AGE_SECONDS=3600

@@ -43,70 +43,76 @@ TRANSLATION_MODEL_ALIASES = {
 }
 
 
-SYSTEM_PROMPT = """तुम एक हरियाणवी भाषा विशेषज्ञ अनुवादक हो। तुम्हारा काम है हिंदी वाक्यों को असली हरियाणवी बोली में बदलना।
+SYSTEM_PROMPT = """तुम एक अत्यंत सटीक हरियाणवी भाषा विशेषज्ञ अनुवादक हो। तुम्हारा एकमात्र कार्य मानक हिंदी को ठेठ हरियाणवी बोली में बदलना है। तुम्हें नीचे दिए गए व्याकरणिक, ध्वन्यात्मक और शाब्दिक नियमों का 100% पालन करना है।
 
-## हरियाणवी भाषा की विशेषताएं
+## 1. ध्वन्यात्मक नियम (Phonetic Shifts) - सर्वोच्च प्राथमिकता
+- 'न' का 'ण' में परिवर्तन: अधिकांश शब्दों के बीच या अंत में 'न' को 'ण' कर दो (जैसे: पानी -> पाणी, खाना -> खाणा, आना -> आणा, अपना -> अपणा)।
+- आदर सूचक पतन (Honorific Collapse): हरियाणवी में 'आप' का प्रयोग नहीं होता। सभी 'आप' को संदर्भ अनुसार 'थम' (तुम) या 'तू' में बदल दो।
 
-### सर्वनाम (Pronouns)
-- मेरा/मेरी → म्हारा/म्हारी
-- तेरा/तेरी → थारा/थारी
-- हम/हमारा → आपां/म्हारा
-- मुझे → म्हने
-- तुम्हें → थम्हने
+## 2. कारक और अव्यय (Postpositions & Conjunctions)
+- में -> म्हैं / मा
+- से -> तै / तैं
+- के लिए -> खातर
+- और -> अर
+- लेकिन / पर -> पण / पर
+- अगर -> जे
 
-### नकारात्मक शब्द (Negation)
-- नहीं → कोन्या (सबसे आम), नी, ना
-- मत → मत / ना कर
+## 3. सर्वनाम (Pronouns)
+- मेरा/मेरी -> म्हारा/म्हारी
+- तेरा/तेरी -> थारा/थारी
+- हम/हमारा -> आपां / म्हारा
+- मुझे / मुझको -> म्हने / मन्नै
+- तुम्हें / तुमको -> थम्हने / तन्नै
+- वह / यह -> ओ / यो
 
-### क्रिया रूप (Verb Forms)
-- है → सै
-- हैं → सैं
-- करना → करणा
-- खाना → खाणा
-- जाना → जाणा
-- आना → आणा
-- देखना → देखणा
+## 4. क्रिया और काल (Verbs & Tenses)
+- है -> सै
+- हैं -> सैं
+- था/थी/थे -> था/थी/थे
+- रहा है / रही है -> रह्या सै / लाग रह्या सै (जैसे: जा रहा है -> जाण लाग रह्या सै)
+- क्रिया का मूल रूप: करना -> करणा, जाना -> जाणा, देखना -> देखणा, बोलना -> बोलणा।
 
-### प्रश्नवाचक शब्द (Question Words)
-- क्या → के
-- क्यों → क्यूं
-- कहाँ → कड़े
-- कैसा → किसा / कियां
-- कब → कद
-- कौन → कौण
+## 5. नकारात्मक और प्रश्नवाचक (Negation & Questions)
+- नहीं -> कोन्या (सर्वाधिक प्रयुक्त), नी, ना
+- मत (मनाही) -> ना / ना कर
+- क्या -> के
+- क्यों -> क्यूं
+- कहाँ -> कड़े
+- कैसा -> किसा
+- कब -> कद
+- कौन -> कौण
 
-### सामान्य शब्द (Common Words)
-- बहुत → घणा
-- लड़का → छोरा
-- लड़की → छोरी
-- पता → बेरा
-- पानी → पाणी
-- खाना → खाणा
-- आ जा → आज्या
-- ले लो → ले-ले
+## 6. मुख्य शब्दावली (Core Vocabulary)
+- बहुत -> घणा
+- लड़का / लड़की -> छोरा / छोरी
+- पता (Knowledge) -> बेरा (जैसे: मुझे पता नहीं -> मन्नै बेरा कोन्या)
+- यहाँ / वहाँ -> उरै / उड़ै
+- जल्दी -> तावला / जल्दी
+- आ जा -> आज्या
+- ले लो -> ले-ले
 
-## Few-shot Examples
+## 7. वाक्य संरचना और आउटपुट नियम (STRICT CONSTRAINTS)
+1. वाक्य संरचना (SOV) हिंदी जैसी ही रहेगी।
+2. केवल और केवल हरियाणवी अनुवाद आउटपुट में दो।
+3. कोई स्पष्टीकरण (explanation), नोट्स, या भूमिका (intro) बिल्कुल मत लिखो।
+4. लिपि 100% देवनागरी होनी चाहिए।
+5. व्यक्तिवाचक संज्ञाओं (Proper Nouns - नाम, स्थान) को मत बदलो।"""
 
-Hindi: मुझे पता नहीं कि वह कहाँ गया
-Haryanvi: म्हने बेरा कोन्या के ओ कड़े ग्या
 
-Hindi: तुम क्या कर रहे हो?
-Haryanvi: थम कै करै सो?
-
-Hindi: आज बहुत गर्मी है
-Haryanvi: आज घणी गर्मी सै
-
-Hindi: वह लड़की बहुत अच्छी है
-Haryanvi: ओ छोरी घणी अच्छी सै
-
-Hindi: मैं खाना खाने जा रहा हूँ
-Haryanvi: मैं खाणा खाण जारा सूं
-
-## नियम
-1. केवल हरियाणवी अनुवाद दो, कोई explanation नहीं
-2. अनुवाद natural और authentic हो
-3. Script हमेशा Devanagari हो
-4. proper nouns unchanged रखो"""
+FEW_SHOT_HISTORY = [
+    {"role": "user", "content": "अपना खाना जल्दी खा लो।"},
+    {"role": "assistant", "content": "अपणा खाणा तावला खा-ले।"},
+    {"role": "user", "content": "आप यह काम मत करो, मैं कर लूँगा।"},
+    {"role": "assistant", "content": "थम यो काम ना कर, मैं कर लूंगा।"},
+    {"role": "user", "content": "वह लड़का पानी पी रहा है।"},
+    {"role": "assistant", "content": "ओ छोरा पाणी पीण लाग रह्या सै।"},
+    {"role": "user", "content": "मुझे पता था लेकिन मैंने बात नहीं की।"},
+    {"role": "assistant", "content": "म्हने बेरा था पण मन्नै बात कोन्या करी।"},
+    {"role": "user", "content": "तुमने उस घर में क्या देखा?"},
+    {"role": "assistant", "content": "तन्नै उस घर म्हैं के देख्या?"},
+    {"role": "user", "content": "रोहित और अमित दिल्ली में काम कर रहे हैं।"},
+    {"role": "assistant", "content": "रोहित अर अमित दिल्ली म्हैं काम करण लाग रहै सैं।"},
+]
 
 
 def _backend() -> str:
@@ -347,24 +353,66 @@ def translate_with_translator(text: str, translator: LoadedTranslator) -> str:
     )
 
 
+def validate_devanagari(text: str) -> bool:
+    """Return true when most letters in the output are Devanagari."""
+    if not text or not text.strip():
+        return False
+
+    letters = [char for char in text if char.isalpha()]
+    if not letters:
+        return False
+
+    devanagari = [
+        char for char in letters if "\u0900" <= char <= "\u097f"
+    ]
+    return (len(devanagari) / len(letters)) >= 0.5
+
+
 def _translate_gguf(text: str, model: Any) -> str:
+    base_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    base_messages.extend(FEW_SHOT_HISTORY)
+    base_messages.append({"role": "user", "content": text.strip()})
+
     response = model.create_chat_completion(
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": f"इस हिंदी वाक्य को हरियाणवी में अनुवाद करो:\n\n{text}",
-            },
-        ],
+        messages=base_messages,
         max_tokens=ModelConfig.LLM_MAX_NEW_TOKENS,
         temperature=ModelConfig.LLM_TEMPERATURE,
         top_p=0.95,
         top_k=64,
-        repeat_penalty=1.1,
-        stop=["<end_of_turn>", "<start_of_turn>", "\n\n"],
+        repeat_penalty=1.05,
     )
-    result = response["choices"][0]["message"]["content"]
-    return _clean_output(result)
+    result = _clean_output(response["choices"][0]["message"]["content"])
+    if validate_devanagari(result):
+        return result
+
+    logger.warning(
+        "Gemma output failed Devanagari validation. Raw output: %s", result
+    )
+    retry_messages = [
+        *base_messages,
+        {"role": "assistant", "content": "[अमान्य आउटपुट / Invalid Output]"},
+        {
+            "role": "user",
+            "content": (
+                "त्रुटि। कोई स्पष्टीकरण न दें। इस वाक्य का अनुवाद केवल "
+                f"देवनागरी लिपि में करें:\n{text.strip()}"
+            ),
+        },
+    ]
+    retry_response = model.create_chat_completion(
+        messages=retry_messages,
+        max_tokens=ModelConfig.LLM_MAX_NEW_TOKENS,
+        temperature=max(ModelConfig.LLM_TEMPERATURE, 0.3),
+        top_p=0.95,
+        top_k=64,
+        repeat_penalty=1.05,
+    )
+    retry_result = _clean_output(retry_response["choices"][0]["message"]["content"])
+    if validate_devanagari(retry_result):
+        return retry_result
+
+    logger.error("Gemma retry failed Devanagari validation. Falling back to source.")
+    return text.strip()
 
 
 def _translate_hf_lora(
@@ -415,5 +463,8 @@ def _clean_output(text: str) -> str:
         text.replace("<end_of_turn>", "")
         .replace("<start_of_turn>", "")
         .replace("Haryanvi:", "")
+        .replace("हरियाणवी:", "")
+        .replace("Hindi:", "")
+        .replace("हिंदी:", "")
         .strip()
     )

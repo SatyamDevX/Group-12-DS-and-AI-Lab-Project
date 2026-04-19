@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LoadedTTS:
+    key: str
+    label: str
     backend: str
     model: Any
     config: Any = None
@@ -27,11 +29,57 @@ class LoadedTTS:
     native_xtts: bool = False
 
 
-def _backend() -> str:
-    backend = ModelConfig.TTS_BACKEND.lower()
-    if backend not in {"vits", "xtts"}:
-        raise ValueError("TTS_BACKEND must be one of: vits, xtts")
-    return backend
+TTS_MODEL_LABELS = {
+    "vits": "Fine-tuned VITS",
+    "xtts": "XTTS-v2",
+}
+
+TTS_MODEL_ALIASES = {
+    "vits": "vits",
+    "coqui_vits": "vits",
+    "haryanvi_vits": "vits",
+    "xtts": "xtts",
+    "xtts_v2": "xtts",
+    "xtts-v2": "xtts",
+    "coqui_xtts": "xtts",
+    "coqui_xtts_v2": "xtts",
+}
+
+
+def normalize_tts_model(model_key: str | None = None) -> str:
+    key = (model_key or ModelConfig.DEFAULT_TTS_MODEL).strip().lower()
+    normalized = TTS_MODEL_ALIASES.get(key)
+    if not normalized:
+        raise ValueError(
+            "tts_model must be one of: " + ", ".join(sorted(TTS_MODEL_LABELS))
+        )
+    return normalized
+
+
+def available_tts_models() -> list[dict[str, str]]:
+    keys = []
+    for raw_key in ModelConfig.TTS_MODELS.split(","):
+        raw_key = raw_key.strip()
+        if not raw_key:
+            continue
+        key = normalize_tts_model(raw_key)
+        if key not in keys:
+            keys.append(key)
+
+    if not keys:
+        keys = [normalize_tts_model(ModelConfig.DEFAULT_TTS_MODEL)]
+
+    return [{"key": key, "label": TTS_MODEL_LABELS[key]} for key in keys]
+
+
+def default_tts_model() -> str:
+    default = normalize_tts_model(ModelConfig.DEFAULT_TTS_MODEL)
+    configured = {item["key"] for item in available_tts_models()}
+    if default not in configured:
+        raise ValueError(
+            f"DEFAULT_TTS_MODEL={default} is not present in TTS_MODELS."
+        )
+    return default
 
 
 def _use_gpu() -> bool:
@@ -215,7 +263,12 @@ def _load_vits(use_gpu: bool) -> LoadedTTS:
         gpu=use_gpu,
     )
     logger.info("VITS ready")
-    return LoadedTTS(backend="vits", model=model)
+    return LoadedTTS(
+        key="vits",
+        label=TTS_MODEL_LABELS["vits"],
+        backend="vits",
+        model=model,
+    )
 
 
 def _load_xtts(use_gpu: bool) -> LoadedTTS:
@@ -281,6 +334,8 @@ def _load_xtts(use_gpu: bool) -> LoadedTTS:
 
     logger.info("XTTS ready with language=%s and speaker=%s", ModelConfig.XTTS_LANGUAGE, speaker_wav)
     return LoadedTTS(
+        key="xtts",
+        label=TTS_MODEL_LABELS["xtts"],
         backend="xtts",
         model=model,
         config=config_obj,
@@ -291,8 +346,14 @@ def _load_xtts(use_gpu: bool) -> LoadedTTS:
     )
 
 
-def load_tts() -> LoadedTTS:
-    backend = _backend()
+def load_tts(model_key: str | None = None) -> LoadedTTS:
+    backend = normalize_tts_model(model_key)
+    configured = {item["key"] for item in available_tts_models()}
+    if backend not in configured:
+        raise ValueError(
+            f"TTS model '{backend}' is not enabled. Set TTS_MODELS to include it."
+        )
+
     use_gpu = _use_gpu()
     logger.info("TTS backend=%s device=%s", backend, "GPU" if use_gpu else "CPU")
 

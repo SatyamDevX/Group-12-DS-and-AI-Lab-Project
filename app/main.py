@@ -31,7 +31,13 @@ from app.models.translator import (
     normalize_translation_model,
     translate_with_translator,
 )
-from app.models.tts_model import load_tts, synthesize
+from app.models.tts_model import (
+    available_tts_models,
+    default_tts_model,
+    load_tts,
+    normalize_tts_model,
+    synthesize,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,11 +47,12 @@ logger = logging.getLogger(__name__)
 
 _translators = {}
 _translator_locks = {}
-_tts = None
+_tts_models = {}
+_tts_locks = {}
 _models_ready = False
 _loading_error = None
 _translator_registry_lock = threading.Lock()
-_tts_lock = threading.Lock()
+_tts_registry_lock = threading.Lock()
 
 
 def _load_models_background():
@@ -55,13 +62,15 @@ def _load_models_background():
     handlers use locks around inference because these model runtimes are not
     guaranteed to be thread-safe.
     """
-    global _tts, _models_ready, _loading_error
+    global _models_ready, _loading_error
     try:
         logger.info("=== Background model loading started ===")
         default_key = default_translation_model()
         _translators[default_key] = load_translator(default_key)
         _translator_locks[default_key] = threading.Lock()
-        _tts = load_tts()
+        default_tts_key = default_tts_model()
+        _tts_models[default_tts_key] = load_tts(default_tts_key)
+        _tts_locks[default_tts_key] = threading.Lock()
         ModelConfig.TMP_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
         _models_ready = True
         logger.info("=== All models ready ===")
@@ -118,6 +127,17 @@ def _get_translator(model_key: str | None):
         return key, _translators[key], _translator_locks[key]
 
 
+def _get_tts(model_key: str | None):
+    key = normalize_tts_model(model_key)
+    with _tts_registry_lock:
+        if key not in _tts_models:
+            logger.info("Lazy loading TTS model: %s", key)
+            tts_model = load_tts(key)
+            _tts_models[key] = tts_model
+            _tts_locks[key] = threading.Lock()
+        return key, _tts_models[key], _tts_locks[key]
+
+
 def _translate_locked(text: str, model_key: str | None = None) -> tuple[str, str]:
     try:
         key, translator, lock = _get_translator(model_key)
@@ -128,9 +148,19 @@ def _translate_locked(text: str, model_key: str | None = None) -> tuple[str, str
         raise
 
 
-def _synthesize_locked(text: str, output_path: str) -> str:
-    with _tts_lock:
-        return synthesize(_tts, text, output_path)
+def _synthesize_locked(
+    text: str,
+    output_path: str,
+    model_key: str | None = None,
+) -> str:
+    try:
+        key, tts_model, lock = _get_tts(model_key)
+        with lock:
+            synthesize(tts_model, text, output_path)
+        return key
+    except Exception:
+        logger.exception("TTS failed for model=%s", model_key)
+        raise
 
 
 # ── Request / Response models ──────────────────────────────────────────────────
@@ -138,11 +168,13 @@ def _synthesize_locked(text: str, output_path: str) -> str:
 class TextIn(BaseModel):
     text: str
     translation_model: str | None = None
+    tts_model: str | None = None
 
 # ADDED: separate request model for TTS-only endpoint
 # Accepts Haryanvi text directly so you can test TTS without going through translation
 class HaryanviIn(BaseModel):
     text: str  # expects Haryanvi text directly
+    tts_model: str | None = None
 
 # ADDED: base64 audio response model for pipeline and tts endpoints
 class AudioResponse(BaseModel):
@@ -162,6 +194,9 @@ async def health(response: Response):
         "default_translation_model": default_translation_model(),
         "available_translation_models": available_translation_models(),
         "loaded_translation_models": sorted(_translators.keys()),
+        "default_tts_model": default_tts_model(),
+        "available_tts_models": available_tts_models(),
+        "loaded_tts_models": sorted(_tts_models.keys()),
         "tts_backend": ModelConfig.TTS_BACKEND,
         "error": _loading_error,
     }
@@ -213,11 +248,16 @@ async def tts_endpoint(req: HaryanviIn):
     audio_id = str(uuid.uuid4())
     path = ModelConfig.TMP_AUDIO_DIR / f"{audio_id}.wav"
     loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _synthesize_locked, req.text, str(path))
+    try:
+        tts_key = await loop.run_in_executor(
+            None, _synthesize_locked, req.text, str(path), req.tts_model
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"TTS failed: {exc}") from exc
     return FileResponse(
         path,
         media_type="audio/wav",
-        filename="haryanvi_tts.wav",
+        filename=f"haryanvi_{tts_key}.wav",
         background=BackgroundTask(path.unlink, missing_ok=True),
     )
 
@@ -242,14 +282,19 @@ async def tts_base64_endpoint(req: HaryanviIn):
     audio_id = str(uuid.uuid4())
     path = ModelConfig.TMP_AUDIO_DIR / f"{audio_id}.wav"
     loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _synthesize_locked, req.text, str(path))
+    try:
+        tts_key = await loop.run_in_executor(
+            None, _synthesize_locked, req.text, str(path), req.tts_model
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"TTS failed: {exc}") from exc
     with open(path, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
     # CHANGED: read sample rate from written file for accuracy
     with sf.SoundFile(str(path)) as sf_file:
         sr = sf_file.samplerate
     path.unlink(missing_ok=True)
-    return {"audio_base64": audio_b64, "sample_rate": sr}
+    return {"audio_base64": audio_b64, "sample_rate": sr, "tts_model": tts_key}
 
 
 # ── Full pipeline ──────────────────────────────────────────────────────────────
@@ -280,12 +325,18 @@ async def pipeline(req: TextIn):
     _cleanup_old_audio()
     audio_id = str(uuid.uuid4())
     path = ModelConfig.TMP_AUDIO_DIR / f"{audio_id}.wav"
-    await loop.run_in_executor(None, _synthesize_locked, haryanvi, str(path))
+    try:
+        tts_key = await loop.run_in_executor(
+            None, _synthesize_locked, haryanvi, str(path), req.tts_model
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"TTS failed: {exc}") from exc
 
     return {
         "hindi": req.text,
         "haryanvi": haryanvi,
         "translation_model": model_key,
+        "tts_model": tts_key,
         "audio_id": audio_id,
         "audio_url": f"/api/audio/{audio_id}",
     }
@@ -318,7 +369,12 @@ async def pipeline_base64(req: TextIn):
     _cleanup_old_audio()
     audio_id = str(uuid.uuid4())
     path = ModelConfig.TMP_AUDIO_DIR / f"{audio_id}.wav"
-    await loop.run_in_executor(None, _synthesize_locked, haryanvi, str(path))
+    try:
+        tts_key = await loop.run_in_executor(
+            None, _synthesize_locked, haryanvi, str(path), req.tts_model
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"TTS failed: {exc}") from exc
 
     with open(path, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
@@ -330,6 +386,7 @@ async def pipeline_base64(req: TextIn):
         "hindi": req.text,
         "haryanvi": haryanvi,
         "translation_model": model_key,
+        "tts_model": tts_key,
         "audio_base64": audio_b64,
         "sample_rate": sr,
     }

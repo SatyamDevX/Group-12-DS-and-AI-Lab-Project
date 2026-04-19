@@ -43,7 +43,7 @@ class ModelConfig:
         "LLM_GGUF_FILENAME", "gemma-4-E4B-it-Q4_K_S.gguf"
     )
     LLM_GGUF_CHAT_FORMAT: str = os.getenv("LLM_GGUF_CHAT_FORMAT", "gemma")
-    LLM_GGUF_N_CTX: int = _int_env("LLM_GGUF_N_CTX", "2048")
+    LLM_GGUF_N_CTX: int = _int_env("LLM_GGUF_N_CTX", "4096")
     LLM_GGUF_N_THREADS: int = _int_env("LLM_GGUF_N_THREADS", "8")
     LLM_GGUF_N_GPU_LAYERS: int = _int_env("LLM_GGUF_N_GPU_LAYERS", "0")
 
@@ -90,6 +90,8 @@ class ModelConfig:
     #   vits -> single-speaker Coqui VITS checkpoint.
     #   xtts -> XTTS-v2 checkpoint with speaker reference audio.
     TTS_BACKEND: str = os.getenv("TTS_BACKEND", "vits").lower()
+    TTS_MODELS: str = os.getenv("TTS_MODELS", "vits,xtts")
+    DEFAULT_TTS_MODEL: str = os.getenv("DEFAULT_TTS_MODEL", TTS_BACKEND)
 
     # ── Coqui VITS TTS ──────────────────────────────────────────────────────────
     TTS_CHECKPOINT: Path = Path(

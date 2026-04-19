@@ -366,7 +366,7 @@
     </svg>
     <div>
       <div class="logo-title">Hindi → Haryanvi</div>
-      <div class="logo-sub">Selectable Translation + Coqui VITS TTS Pipeline</div>
+      <div class="logo-sub">Selectable Translation + VITS / XTTS-v2 Speech</div>
     </div>
   </div>
   <button class="theme-btn" data-theme-toggle aria-label="Switch to light mode">
@@ -392,11 +392,19 @@
     <span id="model-badge-text">Gemma 4 GGUF · Haryanvi Dialect Translation</span>
   </div>
 
-  <div class="model-select-row">
+  <div class="model-select-row" id="translation-model-row">
     <label for="translation-model">Translation model</label>
     <select class="model-select" id="translation-model">
       <option value="gemma_gguf" selected>Gemma 4 GGUF</option>
       <option value="llama_lora">LLaMA 3.1 QLoRA adapter</option>
+    </select>
+  </div>
+
+  <div class="model-select-row" id="tts-model-row">
+    <label for="tts-model">Speech model</label>
+    <select class="model-select" id="tts-model">
+      <option value="vits" selected>Fine-tuned VITS</option>
+      <option value="xtts">XTTS-v2</option>
     </select>
   </div>
 
@@ -502,7 +510,7 @@
 
 </main>
 
-<footer>Hindi → Haryanvi · Gemma 4 GGUF / LLaMA 3.1 QLoRA + Coqui VITS</footer>
+<footer>Hindi → Haryanvi · Gemma 4 GGUF / LLaMA 3.1 QLoRA + Coqui VITS / XTTS-v2</footer>
 
 <script>
 (function () {
@@ -529,21 +537,83 @@
   const inputHaryanvi   = document.getElementById('input-haryanvi-section');
   const copyTransBtn    = document.getElementById('copy-translation-btn');
   const translationModel= document.getElementById('translation-model');
+  const translationModelRow= document.getElementById('translation-model-row');
+  const ttsModel        = document.getElementById('tts-model');
+  const ttsModelRow     = document.getElementById('tts-model-row');
   const modelBadgeText  = document.getElementById('model-badge-text');
 
   let currentTab = 'pipeline';
-  const modelLabels = {
+  let translationModelLabels = {
     gemma_gguf: 'Gemma 4 GGUF',
     llama_lora: 'LLaMA 3.1 QLoRA adapter',
+  };
+  let ttsModelLabels = {
+    vits: 'Fine-tuned VITS',
+    xtts: 'XTTS-v2',
   };
 
   function selectedTranslationModel() {
     return translationModel.value;
   }
 
-  translationModel.addEventListener('change', () => {
-    modelBadgeText.textContent = `${modelLabels[selectedTranslationModel()]} · Haryanvi Dialect Translation`;
-  });
+  function selectedTTSModel() {
+    return ttsModel.value;
+  }
+
+  function updateModelBadge() {
+    const translationLabel = translationModelLabels[selectedTranslationModel()] || selectedTranslationModel();
+    const ttsLabel = ttsModelLabels[selectedTTSModel()] || selectedTTSModel();
+    if (currentTab === 'tts') {
+      modelBadgeText.textContent = `${ttsLabel} · Haryanvi Speech`;
+    } else if (currentTab === 'translate') {
+      modelBadgeText.textContent = `${translationLabel} · Haryanvi Translation`;
+    } else {
+      modelBadgeText.textContent = `${translationLabel} + ${ttsLabel} · Full Pipeline`;
+    }
+  }
+
+  function populateModelSelect(selectEl, models, fallbackLabels) {
+    if (!Array.isArray(models) || models.length === 0) return fallbackLabels;
+    const labels = {};
+    selectEl.innerHTML = '';
+    models.forEach((model, idx) => {
+      labels[model.key] = model.label;
+      const option = document.createElement('option');
+      option.value = model.key;
+      option.textContent = model.label;
+      option.selected = idx === 0;
+      selectEl.appendChild(option);
+    });
+    return labels;
+  }
+
+  async function loadModelOptions() {
+    try {
+      const res = await fetch('/health');
+      if (!res.ok) return;
+      const data = await res.json();
+      translationModelLabels = populateModelSelect(
+        translationModel,
+        data.available_translation_models,
+        translationModelLabels,
+      );
+      ttsModelLabels = populateModelSelect(
+        ttsModel,
+        data.available_tts_models,
+        ttsModelLabels,
+      );
+      if (data.default_translation_model) translationModel.value = data.default_translation_model;
+      if (data.default_tts_model) ttsModel.value = data.default_tts_model;
+      updateModelBadge();
+    } catch (_) {
+      updateModelBadge();
+    }
+  }
+
+  translationModel.addEventListener('change', updateModelBadge);
+  ttsModel.addEventListener('change', updateModelBadge);
+  updateModelBadge();
+  loadModelOptions();
 
   /* ── Theme toggle ─────────────────────────────────────────────────────── */
   const html = document.documentElement;
@@ -573,22 +643,29 @@
       if (currentTab === 'pipeline') {
         inputHindi.style.display = '';
         inputHaryanvi.style.display = 'none';
+        translationModelRow.style.display = '';
+        ttsModelRow.style.display = '';
         pipelineSteps.style.display = '';
         individualBtns.style.display = '';
         submitLabel.textContent = '▶ Run Pipeline';
       } else if (currentTab === 'translate') {
         inputHindi.style.display = '';
         inputHaryanvi.style.display = 'none';
+        translationModelRow.style.display = '';
+        ttsModelRow.style.display = 'none';
         pipelineSteps.style.display = 'none';
         individualBtns.style.display = 'none';
         submitLabel.textContent = '🔤 Translate to Haryanvi';
       } else if (currentTab === 'tts') {
         inputHindi.style.display = 'none';
         inputHaryanvi.style.display = '';
+        translationModelRow.style.display = 'none';
+        ttsModelRow.style.display = '';
         pipelineSteps.style.display = 'none';
         individualBtns.style.display = 'none';
         submitLabel.textContent = '🔊 Synthesise Speech';
       }
+      updateModelBadge();
     });
   });
 
@@ -662,7 +739,11 @@
     try {
       const res = await fetch('/api/pipeline', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, translation_model: selectedTranslationModel() }),
+        body: JSON.stringify({
+          text,
+          translation_model: selectedTranslationModel(),
+          tts_model: selectedTTSModel(),
+        }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || 'Pipeline failed.'); }
       const data = await res.json();
@@ -722,7 +803,7 @@
     try {
       const res = await fetch('/api/tts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, tts_model: selectedTTSModel() }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || 'TTS failed.'); }
       const blob = await res.blob();
@@ -786,7 +867,7 @@
     try {
       const res = await fetch('/api/tts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, tts_model: selectedTTSModel() }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || 'TTS failed.'); }
       const blob = await res.blob();
