@@ -103,7 +103,7 @@ Audio Output
 
 ```bash id="run2"
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8080 
 ```
 
 ---
@@ -166,14 +166,16 @@ These datasets were used for training the translation and TTS models respectivel
 
 ### Translation
 
-* Initial model: LLaMa 
-* Delployed Model: Gemma GGUF
+* Initial model: LLaMA 3.1 (8B) using QLoRA 
+
+
+* Delployed Model: gemma-4-E4B-it-Q4_K_S
 * Method: Prompt engineering
 
 ### TTS
 
-* Model: Coqui VITS
-* Checkpoint: best_model_16731.pth
+* Model: Coqui VITS (as base model)
+* Checkpoint: best_model_16731.pth (fully trained)
 
 ---
 
@@ -255,6 +257,7 @@ Output:
 * Larger dataset
 * Fine-tune Gemma
 * Improve TTS quality
+* 
 
 ---
 

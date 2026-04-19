@@ -13,12 +13,13 @@ The application requires the following files placed in this exact directory stru
 
 ## Download Locations
 
-Obtain the files from either sources:
+Obtain the large models files from either of sources:
 
 ### 1. LLM Weights (`gemma-4-E4B-it-Q4_K_S.gguf`)
-* **Hugging Face:** `[PLACEHOLDER_HF_LLM_LINK]`
-* **Google Drive:** `[PLACEHOLDER_GDRIVE_LLM_LINK]`
+* **Hugging Face:** `[https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF]`
+* **Google Drive:** `[https://drive.google.com/file/d/1kz6Z3AByqE_t90V1zVO375UIHdcSL1iA/view?usp=sharing]`
 
 ### 2. TTS Weights & Config (`best_model_16731.pth`, `config.json`)
-* **Hugging Face:** `[PLACEHOLDER_HF_TTS_LINK]`
-* **Google Drive:** `[PLACEHOLDER_GDRIVE_TTS_LINK]`
+* **Hugging Face:** `[https://huggingface.co/Satyam-Srivastava/TTS_haryanvi_bangru_vits_based_model/tree/main]`
+* **Google Drive:** `[https://drive.google.com/drive/folders/14XOFw7DXajTu9_3D22z0aasepSPXV_lJ?usp=sharing]`
+

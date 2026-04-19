@@ -27,7 +27,7 @@ This project follows a **research → production transition**:
 
 ### Phase 2 — Production Optimization
 
-* Switched to **Gemma GGUF model**
+* Switched to **gemma-4-E4B-it-Q4_K_S gguf model**
 * Added **prompt engineering + few-shot examples**
 * Result:
 
@@ -66,7 +66,12 @@ The final deployed system uses optimized inference (Gemma GGUF + trained VITS ch
 
 ### 🔤 Translation Model
 
-* Base: Gemma GGUF (local inference)
+## Phase1
+* Base: LLaMA 3.1 (8B) using QLoRA 
+* Trained using 5,594 Hindi–Haryanvi pairs dataset.
+
+## Phase2
+* Deployed: gemma-4-E4B-it-Q4_K_S (after re-engineering pipeline)
 * Prompt-based dialect transformation
 * Few-shot conditioning
 
@@ -74,7 +79,8 @@ The final deployed system uses optimized inference (Gemma GGUF + trained VITS ch
 
 * Architecture: Coqui VITS
 * Checkpoint: `best_model_16731.pth`
-* Output: 22050 Hz audio
+* Output: 22050 Hz wav audio 
+* Huggingface delployed space [link](https://huggingface.co/spaces/Satyam-Srivastava/tts-haryanvi-bangru-text-to-audio)
 
 ---
 
@@ -108,7 +114,7 @@ Experimental (Not deployed):
 
 ```bash id="run1"
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
 ---
