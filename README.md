@@ -70,6 +70,8 @@ docker run --rm -p 8080:8080 --env-file .env \
 For a LoRA deployment instead of GGUF:
 
 ```bash
+pip install -r requirements-lora.txt
+
 LLM_BACKEND=hf_lora
 LLM_HF_BASE_MODEL_ID=meta-llama/Meta-Llama-3.1-8B-Instruct
 LLM_HF_ADAPTER_ID=your-org/hindi-haryanvi-lora

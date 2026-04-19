@@ -1,0 +1,11 @@
+# Optional dependencies for LLM_BACKEND=hf_lora.
+#
+# The Modal deployment currently uses LLM_BACKEND=gguf, so these are kept out of
+# requirements.txt to reduce build time and avoid bitsandbytes/CUDA failures when
+# the PEFT backend is not used.
+
+-r requirements.txt
+
+accelerate==1.13.0
+bitsandbytes
+peft==0.19.1
