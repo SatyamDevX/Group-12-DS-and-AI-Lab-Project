@@ -356,6 +356,21 @@ export XTTS_SPEAKER_WAV_REPO_ID=your-org/haryanvi-speaker-refs
 export XTTS_SPEAKER_WAV_FILENAME=reference.wav
 ```
 
+To create a single XTTS reference clip from `ankitdhiman/haryanvi-tts` and
+upload it to Hugging Face:
+
+```bash
+.venv_deploy/bin/python scripts/create_xtts_reference_from_dataset.py --upload --repo-id Sparkonix/haryanvi-xtts-reference
+```
+
+Then set:
+
+```bash
+XTTS_SPEAKER_WAV_REPO_ID=Sparkonix/haryanvi-xtts-reference
+XTTS_SPEAKER_WAV_FILENAME=reference.wav
+XTTS_LANGUAGE=hi
+```
+
 You can also use the stock Coqui XTTS model for comparison:
 
 ```bash
