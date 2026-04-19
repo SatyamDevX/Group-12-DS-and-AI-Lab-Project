@@ -14,7 +14,7 @@ import argparse
 import os
 from pathlib import Path
 
-from huggingface_hub import HfApi, upload_file
+from huggingface_hub import HfApi, get_token, upload_file
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -103,12 +103,12 @@ def main() -> None:
     _require_file(args.tts_checkpoint)
     _require_file(args.tts_config)
 
-    token = os.getenv("HF_TOKEN")
+    token = os.getenv("HF_TOKEN") or get_token()
     if not token:
         raise RuntimeError(
-            "HF_TOKEN is required to create repos and upload artifacts. Run "
-            "`export HF_TOKEN=hf_xxx` with a Hugging Face write token, then run "
-            "this script again."
+            "A Hugging Face write token is required to create repos and upload "
+            "artifacts. Run `export HF_TOKEN=hf_xxx`, or run "
+            "`.venv_deploy/bin/hf auth login`, then run this script again."
         )
 
     api = HfApi()
