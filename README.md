@@ -133,6 +133,7 @@ gated, add `HF_TOKEN` to the Modal secret and make sure the token has access to
 
 The LoRA inference path uses the same chat shape from `rds_llama_finetune.ipynb`:
 system prompt plus the raw Hindi sentence as the user message.
+The deployment also pins `peft==0.13.2`, matching the notebook environment.
 
 After you fine-tune XTTS-v2 and upload it, switch the TTS settings to:
 
