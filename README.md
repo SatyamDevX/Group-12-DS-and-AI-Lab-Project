@@ -32,10 +32,15 @@ LLM_BACKEND=gguf
 LLM_GGUF_REPO_ID=your-org/hindi-haryanvi-gguf
 LLM_GGUF_FILENAME=gemma-4-E4B-it-Q4_K_S.gguf
 TTS_BACKEND=xtts
-XTTS_REPO_ID=your-org/haryanvi-xtts-v2
+XTTS_LOADER=api
+XTTS_REPO_ID=coqui/XTTS-v2
 XTTS_CHECKPOINT_FILENAME=model.pth
 XTTS_CONFIG_FILENAME=config.json
-XTTS_SPEAKER_WAV_FILENAME=reference.wav
+XTTS_VOCAB_FILENAME=vocab.json
+XTTS_SPEAKERS_FILENAME=speakers_xtts.pth
+XTTS_DVAE_FILENAME=dvae.pth
+XTTS_MEL_STATS_FILENAME=mel_stats.pth
+XTTS_SPEAKER_WAV_FILENAME=samples/en_sample.wav
 XTTS_LANGUAGE=hi
 # COQUI_TOS_AGREED=1  # set after reviewing the XTTS-v2 license terms
 ```
@@ -139,7 +144,8 @@ Satyam adapter config includes the newer `alora_invocation_tokens` field.
 This adapter is loaded without merging because aLoRA adapters cannot be merged
 into the base model.
 
-After you fine-tune XTTS-v2 and upload it, switch the TTS settings to:
+To use stock XTTS-v2 from Hugging Face instead of the VITS checkpoint, switch
+only the TTS settings:
 
 ```bash
 modal secret create hindi-haryanvi-secrets \
@@ -153,13 +159,33 @@ modal secret create hindi-haryanvi-secrets \
   LLM_GGUF_N_GPU_LAYERS=-1 \
   LLM_MAX_NEW_TOKENS=64 \
   TTS_BACKEND=xtts \
-  XTTS_REPO_ID=your-org/haryanvi-xtts-v2 \
+  XTTS_LOADER=api \
+  XTTS_REPO_ID=coqui/XTTS-v2 \
   XTTS_CHECKPOINT_FILENAME=model.pth \
   XTTS_CONFIG_FILENAME=config.json \
   XTTS_VOCAB_FILENAME=vocab.json \
-  XTTS_SPEAKER_WAV_FILENAME=reference.wav \
+  XTTS_SPEAKERS_FILENAME=speakers_xtts.pth \
+  XTTS_DVAE_FILENAME=dvae.pth \
+  XTTS_MEL_STATS_FILENAME=mel_stats.pth \
+  XTTS_SPEAKER_WAV_FILENAME=samples/en_sample.wav \
   XTTS_LANGUAGE=hi \
   COQUI_TOS_AGREED=1
+```
+
+After you fine-tune XTTS-v2 and upload it to your own Hugging Face account,
+change only `XTTS_REPO_ID` and `XTTS_SPEAKER_WAV_FILENAME` if your reference
+WAV has a different path:
+
+```bash
+XTTS_REPO_ID=your-org/haryanvi-xtts-v2
+XTTS_SPEAKER_WAV_FILENAME=reference.wav
+```
+
+If the generic Coqui loader cannot open your fine-tuned XTTS-v2 repo, keep the
+same model files and change only:
+
+```bash
+XTTS_LOADER=native
 ```
 
 To upload the current local GGUF and VITS files to Hugging Face:
@@ -274,20 +300,36 @@ from local disk.
 
 ### Hugging Face XTTS-v2 TTS
 
-For a college project demo, upload the fine-tuned XTTS-v2 files and one speaker
-reference WAV to a private Hugging Face model repo:
+For a college project demo, you can use stock XTTS-v2 from Hugging Face first:
 
 ```bash
 export HF_TOKEN=hf_xxx
 export TTS_BACKEND=xtts
-export XTTS_REPO_ID=your-org/haryanvi-xtts-v2
+export XTTS_LOADER=api
+export XTTS_REPO_ID=coqui/XTTS-v2
 export XTTS_CHECKPOINT_FILENAME=model.pth
 export XTTS_CONFIG_FILENAME=config.json
 export XTTS_VOCAB_FILENAME=vocab.json
 export XTTS_SPEAKERS_FILENAME=speakers_xtts.pth
-export XTTS_SPEAKER_WAV_FILENAME=reference.wav
+export XTTS_DVAE_FILENAME=dvae.pth
+export XTTS_MEL_STATS_FILENAME=mel_stats.pth
+export XTTS_SPEAKER_WAV_FILENAME=samples/en_sample.wav
 export XTTS_LANGUAGE=hi
 uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
+
+After fine-tuning and uploading XTTS-v2 to your own Hugging Face model repo,
+change only:
+
+```bash
+export XTTS_REPO_ID=your-org/haryanvi-xtts-v2
+export XTTS_SPEAKER_WAV_FILENAME=reference.wav
+```
+
+For fine-tuned XTTS-v2 repos that need explicit checkpoint loading, switch:
+
+```bash
+export XTTS_LOADER=native
 ```
 
 If the speaker WAV is in a separate repo, use:
@@ -307,6 +349,33 @@ export XTTS_SPEAKER_WAV_FILENAME=reference.wav
 export XTTS_LANGUAGE=hi
 ```
 
+Local XTTS-v2 files work without Hugging Face by using a directory:
+
+```bash
+export TTS_BACKEND=xtts
+export XTTS_LOADER=native
+export XTTS_MODEL_DIR=./xtts_finetuned
+export XTTS_CHECKPOINT_FILENAME=model.pth
+export XTTS_CONFIG_FILENAME=config.json
+export XTTS_VOCAB_FILENAME=vocab.json
+export XTTS_SPEAKERS_FILENAME=speakers_xtts.pth
+export XTTS_SPEAKER_WAV_PATH=./xtts_finetuned/reference.wav
+export XTTS_LANGUAGE=hi
+```
+
+Or point to individual local files:
+
+```bash
+export TTS_BACKEND=xtts
+export XTTS_LOADER=native
+export XTTS_CHECKPOINT_PATH=./xtts_finetuned/model.pth
+export XTTS_CONFIG_PATH=./xtts_finetuned/config.json
+export XTTS_VOCAB_PATH=./xtts_finetuned/vocab.json
+export XTTS_SPEAKERS_PATH=./xtts_finetuned/speakers_xtts.pth
+export XTTS_SPEAKER_WAV_PATH=./xtts_finetuned/reference.wav
+export XTTS_LANGUAGE=hi
+```
+
 ## Useful Env Vars
 
 ```bash
@@ -314,6 +383,7 @@ export DEVICE=auto                  # auto, cpu, or cuda
 export LLM_MAX_NEW_TOKENS=256
 export LLM_TEMPERATURE=0.1
 export TTS_BACKEND=xtts             # vits or xtts
+export XTTS_LOADER=api              # api or native
 export TMP_AUDIO_DIR=/tmp/audio_outputs
 export TMP_AUDIO_MAX_AGE_SECONDS=3600
 ```
@@ -336,5 +406,8 @@ huggingface-cli repo create your-org/haryanvi-xtts-v2 --type model --private
 huggingface-cli upload your-org/haryanvi-xtts-v2 ./xtts_finetuned/model.pth
 huggingface-cli upload your-org/haryanvi-xtts-v2 ./xtts_finetuned/config.json
 huggingface-cli upload your-org/haryanvi-xtts-v2 ./xtts_finetuned/vocab.json
+huggingface-cli upload your-org/haryanvi-xtts-v2 ./xtts_finetuned/speakers_xtts.pth
+huggingface-cli upload your-org/haryanvi-xtts-v2 ./xtts_finetuned/dvae.pth
+huggingface-cli upload your-org/haryanvi-xtts-v2 ./xtts_finetuned/mel_stats.pth
 huggingface-cli upload your-org/haryanvi-xtts-v2 ./xtts_finetuned/reference.wav
 ```

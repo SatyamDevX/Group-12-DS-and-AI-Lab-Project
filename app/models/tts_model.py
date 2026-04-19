@@ -7,6 +7,7 @@ Supported backends:
 """
 from dataclasses import dataclass
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +20,11 @@ logger = logging.getLogger(__name__)
 class LoadedTTS:
     backend: str
     model: Any
+    config: Any = None
     speaker_wav: str | None = None
     language: str | None = None
+    sample_rate: int | None = None
+    native_xtts: bool = False
 
 
 def _backend() -> str:
@@ -47,6 +51,12 @@ def _download(repo_id: str, filename: str) -> Path:
     return Path(hf_hub_download(repo_id=repo_id, filename=filename))
 
 
+def _require_file(path: Path, label: str) -> Path:
+    if not path.exists():
+        raise FileNotFoundError(f"{label} not found: {path}")
+    return path
+
+
 def _resolve_vits_artifacts() -> tuple[Path, Path]:
     if ModelConfig.TTS_REPO_ID:
         return (
@@ -54,11 +64,114 @@ def _resolve_vits_artifacts() -> tuple[Path, Path]:
             _download(ModelConfig.TTS_REPO_ID, ModelConfig.TTS_CONFIG_FILENAME),
         )
 
-    if not ModelConfig.TTS_CHECKPOINT.exists():
-        raise FileNotFoundError(f"TTS checkpoint not found: {ModelConfig.TTS_CHECKPOINT}")
-    if not ModelConfig.TTS_CONFIG.exists():
-        raise FileNotFoundError(f"TTS config not found: {ModelConfig.TTS_CONFIG}")
-    return ModelConfig.TTS_CHECKPOINT, ModelConfig.TTS_CONFIG
+    return (
+        _require_file(ModelConfig.TTS_CHECKPOINT, "TTS checkpoint"),
+        _require_file(ModelConfig.TTS_CONFIG, "TTS config"),
+    )
+
+
+def _optional_xtts_file(path: Path, label: str) -> Path | None:
+    return _require_file(path, label) if path.exists() else None
+
+
+def _resolve_xtts_artifacts() -> dict[str, Path | None]:
+    if ModelConfig.XTTS_CHECKPOINT_PATH or ModelConfig.XTTS_CONFIG_PATH:
+        if not ModelConfig.XTTS_CHECKPOINT_PATH or not ModelConfig.XTTS_CONFIG_PATH:
+            raise ValueError(
+                "Set both XTTS_CHECKPOINT_PATH and XTTS_CONFIG_PATH, or use "
+                "XTTS_MODEL_DIR/XTTS_REPO_ID instead."
+            )
+        return {
+            "checkpoint": _require_file(
+                ModelConfig.XTTS_CHECKPOINT_PATH,
+                "XTTS checkpoint",
+            ),
+            "config": _require_file(ModelConfig.XTTS_CONFIG_PATH, "XTTS config"),
+            "vocab": (
+                _require_file(ModelConfig.XTTS_VOCAB_PATH, "XTTS vocab")
+                if ModelConfig.XTTS_VOCAB_PATH
+                else None
+            ),
+            "speakers": (
+                _require_file(ModelConfig.XTTS_SPEAKERS_PATH, "XTTS speakers file")
+                if ModelConfig.XTTS_SPEAKERS_PATH
+                else None
+            ),
+        }
+
+    if ModelConfig.XTTS_MODEL_DIR:
+        model_dir = _require_file(ModelConfig.XTTS_MODEL_DIR, "XTTS model directory")
+        return {
+            "checkpoint": _require_file(
+                model_dir / ModelConfig.XTTS_CHECKPOINT_FILENAME,
+                "XTTS checkpoint",
+            ),
+            "config": _require_file(
+                model_dir / ModelConfig.XTTS_CONFIG_FILENAME,
+                "XTTS config",
+            ),
+            "vocab": (
+                _optional_xtts_file(model_dir / ModelConfig.XTTS_VOCAB_FILENAME, "XTTS vocab")
+                if ModelConfig.XTTS_VOCAB_FILENAME
+                else None
+            ),
+            "speakers": (
+                _optional_xtts_file(
+                    model_dir / ModelConfig.XTTS_SPEAKERS_FILENAME,
+                    "XTTS speakers file",
+                )
+                if ModelConfig.XTTS_SPEAKERS_FILENAME
+                else None
+            ),
+            "dvae": (
+                _optional_xtts_file(model_dir / ModelConfig.XTTS_DVAE_FILENAME, "XTTS DVAE")
+                if ModelConfig.XTTS_DVAE_FILENAME
+                else None
+            ),
+            "mel_stats": (
+                _optional_xtts_file(
+                    model_dir / ModelConfig.XTTS_MEL_STATS_FILENAME,
+                    "XTTS mel stats",
+                )
+                if ModelConfig.XTTS_MEL_STATS_FILENAME
+                else None
+            ),
+        }
+
+    if ModelConfig.XTTS_REPO_ID:
+        artifacts: dict[str, Path | None] = {
+            "checkpoint": _download(
+                ModelConfig.XTTS_REPO_ID,
+                ModelConfig.XTTS_CHECKPOINT_FILENAME,
+            ),
+            "config": _download(
+                ModelConfig.XTTS_REPO_ID,
+                ModelConfig.XTTS_CONFIG_FILENAME,
+            ),
+            "vocab": None,
+            "speakers": None,
+            "dvae": None,
+            "mel_stats": None,
+        }
+        optional_filenames = {
+            "vocab": ModelConfig.XTTS_VOCAB_FILENAME,
+            "speakers": ModelConfig.XTTS_SPEAKERS_FILENAME,
+            "dvae": ModelConfig.XTTS_DVAE_FILENAME,
+            "mel_stats": ModelConfig.XTTS_MEL_STATS_FILENAME,
+        }
+        for key, filename in optional_filenames.items():
+            if not filename:
+                continue
+            try:
+                artifacts[key] = _download(ModelConfig.XTTS_REPO_ID, filename)
+            except Exception:
+                logger.info("Optional XTTS artifact not found: %s", filename)
+        return artifacts
+
+    raise ValueError(
+        "Set XTTS_MODEL_NAME, XTTS_REPO_ID, XTTS_MODEL_DIR, or explicit "
+        "XTTS_CHECKPOINT_PATH/XTTS_CONFIG_PATH when TTS_BACKEND=xtts."
+    )
 
 
 def _resolve_xtts_speaker_wav() -> Path:
@@ -72,6 +185,12 @@ def _resolve_xtts_speaker_wav() -> Path:
         return _download(
             ModelConfig.XTTS_SPEAKER_WAV_REPO_ID,
             ModelConfig.XTTS_SPEAKER_WAV_FILENAME,
+        )
+
+    if ModelConfig.XTTS_MODEL_DIR and ModelConfig.XTTS_SPEAKER_WAV_FILENAME:
+        return _require_file(
+            ModelConfig.XTTS_MODEL_DIR / ModelConfig.XTTS_SPEAKER_WAV_FILENAME,
+            "XTTS speaker wav",
         )
 
     if ModelConfig.XTTS_REPO_ID and ModelConfig.XTTS_SPEAKER_WAV_FILENAME:
@@ -104,40 +223,71 @@ def _load_xtts(use_gpu: bool) -> LoadedTTS:
 
     speaker_wav = _resolve_xtts_speaker_wav()
 
-    if ModelConfig.XTTS_MODEL_NAME:
+    if ModelConfig.XTTS_LOADER not in {"api", "native"}:
+        raise ValueError("XTTS_LOADER must be one of: api, native")
+
+    explicit_xtts_repo = bool(os.getenv("XTTS_REPO_ID"))
+    if ModelConfig.XTTS_MODEL_NAME and not (
+        explicit_xtts_repo
+        or ModelConfig.XTTS_MODEL_DIR
+        or ModelConfig.XTTS_CHECKPOINT_PATH
+    ):
         logger.info("Loading XTTS model name: %s", ModelConfig.XTTS_MODEL_NAME)
         model = TTS(ModelConfig.XTTS_MODEL_NAME, progress_bar=False, gpu=use_gpu)
-    elif ModelConfig.XTTS_REPO_ID:
-        checkpoint = _download(ModelConfig.XTTS_REPO_ID, ModelConfig.XTTS_CHECKPOINT_FILENAME)
-        config = _download(ModelConfig.XTTS_REPO_ID, ModelConfig.XTTS_CONFIG_FILENAME)
-        # These files are used by XTTS configs/checkpoints when present. Download
-        # them early so the local HF snapshot contains the full model folder.
-        for filename in (
-            ModelConfig.XTTS_VOCAB_FILENAME,
-            ModelConfig.XTTS_SPEAKERS_FILENAME,
-        ):
-            if filename:
-                try:
-                    _download(ModelConfig.XTTS_REPO_ID, filename)
-                except Exception:
-                    logger.info("Optional XTTS artifact not found: %s", filename)
-
-        logger.info("Loading XTTS checkpoint from %s", checkpoint)
-        model = TTS(
-            model_path=str(checkpoint),
-            config_path=str(config),
-            progress_bar=False,
-            gpu=use_gpu,
-        )
+        native_xtts = False
+        config_obj = None
+        sample_rate = None
     else:
-        raise ValueError("Set XTTS_MODEL_NAME or XTTS_REPO_ID when TTS_BACKEND=xtts")
+        artifacts = _resolve_xtts_artifacts()
+        checkpoint = artifacts["checkpoint"]
+        config = artifacts["config"]
+        vocab = artifacts["vocab"]
+        speakers = artifacts["speakers"]
+        logger.info("Loading XTTS checkpoint from %s", checkpoint)
+
+        if ModelConfig.XTTS_LOADER == "api":
+            model = TTS(
+                model_path=str(checkpoint),
+                config_path=str(config),
+                progress_bar=False,
+                gpu=use_gpu,
+            )
+            native_xtts = False
+            config_obj = None
+            sample_rate = None
+        else:
+            from TTS.tts.configs.xtts_config import XttsConfig
+            from TTS.tts.models.xtts import Xtts
+
+            config_obj = XttsConfig()
+            config_obj.load_json(str(config))
+            model = Xtts.init_from_config(config_obj)
+            load_kwargs = {
+                "checkpoint_path": str(checkpoint),
+                "eval": True,
+                "use_deepspeed": ModelConfig.XTTS_USE_DEEPSPEED,
+            }
+            if vocab:
+                load_kwargs["vocab_path"] = str(vocab)
+            if speakers:
+                load_kwargs["speaker_file_path"] = str(speakers)
+            model.load_checkpoint(config_obj, **load_kwargs)
+            if use_gpu:
+                model.cuda()
+            native_xtts = True
+            sample_rate = int(
+                getattr(getattr(config_obj, "audio", None), "output_sample_rate", 24000)
+            )
 
     logger.info("XTTS ready with language=%s and speaker=%s", ModelConfig.XTTS_LANGUAGE, speaker_wav)
     return LoadedTTS(
         backend="xtts",
         model=model,
+        config=config_obj,
         speaker_wav=str(speaker_wav),
         language=ModelConfig.XTTS_LANGUAGE,
+        sample_rate=sample_rate,
+        native_xtts=native_xtts,
     )
 
 
@@ -153,13 +303,29 @@ def load_tts() -> LoadedTTS:
 
 def synthesize(tts_model: LoadedTTS | Any, text: str, output_path: str) -> str:
     if isinstance(tts_model, LoadedTTS) and tts_model.backend == "xtts":
-        tts_model.model.tts_to_file(
-            text=text,
-            file_path=output_path,
-            speaker_wav=tts_model.speaker_wav,
-            language=tts_model.language,
-            split_sentences=True,
-        )
+        if tts_model.native_xtts:
+            import soundfile as sf
+
+            wav = tts_model.model.synthesize(
+                text=text,
+                config=tts_model.config,
+                speaker_wav=tts_model.speaker_wav,
+                language=tts_model.language,
+                gpt_cond_len=ModelConfig.XTTS_GPT_COND_LEN,
+                temperature=ModelConfig.XTTS_TEMPERATURE,
+                speed=ModelConfig.XTTS_SPEED,
+            )["wav"]
+            if hasattr(wav, "detach"):
+                wav = wav.detach().cpu().numpy()
+            sf.write(output_path, wav, tts_model.sample_rate or 24000)
+        else:
+            tts_model.model.tts_to_file(
+                text=text,
+                file_path=output_path,
+                speaker_wav=tts_model.speaker_wav,
+                language=tts_model.language,
+                split_sentences=True,
+            )
         return output_path
 
     model = tts_model.model if isinstance(tts_model, LoadedTTS) else tts_model

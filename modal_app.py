@@ -51,6 +51,7 @@ image = (
             "DEFAULT_TRANSLATION_MODEL": "gemma_gguf",
             "LLM_GGUF_N_GPU_LAYERS": "-1",
             "TTS_BACKEND": "vits",
+            "XTTS_LOADER": "api",
             "XTTS_LANGUAGE": "hi",
         }
     )

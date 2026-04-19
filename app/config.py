@@ -106,13 +106,40 @@ class ModelConfig:
     TTS_CONFIG_FILENAME: str = os.getenv("TTS_CONFIG_FILENAME", "config.json")
 
     # ── Coqui XTTS-v2 TTS ───────────────────────────────────────────────────────
+    # XTTS_LOADER:
+    #   api    -> Coqui TTS API loader. Good for stock XTTS and most checkpoints.
+    #   native -> Direct Xtts loader. Useful for fine-tuned XTTS-v2 artifacts.
+    XTTS_LOADER: str = os.getenv("XTTS_LOADER", "api").lower()
     XTTS_MODEL_NAME: str | None = os.getenv("XTTS_MODEL_NAME")
-    XTTS_REPO_ID: str | None = os.getenv("XTTS_REPO_ID")
+    XTTS_MODEL_DIR: Path | None = (
+        Path(os.environ["XTTS_MODEL_DIR"]) if os.getenv("XTTS_MODEL_DIR") else None
+    )
+    XTTS_CHECKPOINT_PATH: Path | None = (
+        Path(os.environ["XTTS_CHECKPOINT_PATH"])
+        if os.getenv("XTTS_CHECKPOINT_PATH")
+        else None
+    )
+    XTTS_CONFIG_PATH: Path | None = (
+        Path(os.environ["XTTS_CONFIG_PATH"]) if os.getenv("XTTS_CONFIG_PATH") else None
+    )
+    XTTS_VOCAB_PATH: Path | None = (
+        Path(os.environ["XTTS_VOCAB_PATH"]) if os.getenv("XTTS_VOCAB_PATH") else None
+    )
+    XTTS_SPEAKERS_PATH: Path | None = (
+        Path(os.environ["XTTS_SPEAKERS_PATH"])
+        if os.getenv("XTTS_SPEAKERS_PATH")
+        else None
+    )
+    XTTS_REPO_ID: str | None = os.getenv("XTTS_REPO_ID", "coqui/XTTS-v2")
     XTTS_CHECKPOINT_FILENAME: str = os.getenv("XTTS_CHECKPOINT_FILENAME", "model.pth")
     XTTS_CONFIG_FILENAME: str = os.getenv("XTTS_CONFIG_FILENAME", "config.json")
     XTTS_VOCAB_FILENAME: str | None = os.getenv("XTTS_VOCAB_FILENAME", "vocab.json")
     XTTS_SPEAKERS_FILENAME: str | None = os.getenv(
         "XTTS_SPEAKERS_FILENAME", "speakers_xtts.pth"
+    )
+    XTTS_DVAE_FILENAME: str | None = os.getenv("XTTS_DVAE_FILENAME", "dvae.pth")
+    XTTS_MEL_STATS_FILENAME: str | None = os.getenv(
+        "XTTS_MEL_STATS_FILENAME", "mel_stats.pth"
     )
     XTTS_SPEAKER_WAV_PATH: Path | None = (
         Path(os.environ["XTTS_SPEAKER_WAV_PATH"])
@@ -120,8 +147,14 @@ class ModelConfig:
         else None
     )
     XTTS_SPEAKER_WAV_REPO_ID: str | None = os.getenv("XTTS_SPEAKER_WAV_REPO_ID")
-    XTTS_SPEAKER_WAV_FILENAME: str | None = os.getenv("XTTS_SPEAKER_WAV_FILENAME")
+    XTTS_SPEAKER_WAV_FILENAME: str | None = os.getenv(
+        "XTTS_SPEAKER_WAV_FILENAME", "samples/en_sample.wav"
+    )
     XTTS_LANGUAGE: str = os.getenv("XTTS_LANGUAGE", "hi")
+    XTTS_USE_DEEPSPEED: bool = _bool_env("XTTS_USE_DEEPSPEED", "false")
+    XTTS_GPT_COND_LEN: int = _int_env("XTTS_GPT_COND_LEN", "3")
+    XTTS_TEMPERATURE: float = _float_env("XTTS_TEMPERATURE", "0.75")
+    XTTS_SPEED: float = _float_env("XTTS_SPEED", "1.0")
 
     # ── Server ──────────────────────────────────────────────────────────────────
     HOST: str = os.getenv("HOST", "0.0.0.0")
