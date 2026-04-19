@@ -49,6 +49,21 @@ def _copy_reference(source_path: Path, output_path: Path) -> None:
     sf.write(output_path, audio, sample_rate)
 
 
+def _trim_wav(source_path: Path, output_path: Path, start_seconds: float, seconds: float) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(source_path), "rb") as src:
+        params = src.getparams()
+        sample_rate = src.getframerate()
+        start_frame = int(start_seconds * sample_rate)
+        frame_count = int(seconds * sample_rate)
+        src.setpos(min(start_frame, src.getnframes()))
+        frames = src.readframes(frame_count)
+
+    with wave.open(str(output_path), "wb") as dst:
+        dst.setparams(params)
+        dst.writeframes(frames)
+
+
 def _score_row(row: dict, text_column: str) -> tuple[int, int]:
     text = str(row.get(text_column) or "")
     # Prefer plain sentence-like clips with enough text but no noisy metadata.
@@ -180,6 +195,20 @@ def create_reference(args: argparse.Namespace) -> Path:
                 print(f"Text: {text}")
             return args.output
 
+        if args.allow_trim and duration > args.max_seconds:
+            trim_seconds = min(args.trim_seconds, duration)
+            trim_start = min(args.trim_start_seconds, max(0.0, duration - trim_seconds))
+            _trim_wav(candidate_path, args.output, trim_start, trim_seconds)
+            trimmed_duration = _duration_seconds(args.output)
+            text = str(row.get(args.text_column) or "").strip()
+            print(f"Wrote trimmed reference {args.output}")
+            print(f"Source file: {audio_path}")
+            print(f"Source duration: {duration:.2f}s")
+            print(f"Trim: start={trim_start:.2f}s duration={trimmed_duration:.2f}s")
+            if text:
+                print(f"Text: {text}")
+            return args.output
+
         print(
             f"Skipping {audio_path}: {duration:.2f}s outside "
             f"{args.min_seconds}-{args.max_seconds}s"
@@ -240,6 +269,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-seconds", type=float, default=13.0)
     parser.add_argument("--min-text-chars", type=int, default=110)
     parser.add_argument("--max-scan", type=int, default=40)
+    parser.add_argument("--allow-trim", action="store_true")
+    parser.add_argument("--trim-seconds", type=float, default=10.0)
+    parser.add_argument("--trim-start-seconds", type=float, default=1.0)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--upload", action="store_true")
     parser.add_argument("--namespace", default=os.getenv("HF_NAMESPACE"))
