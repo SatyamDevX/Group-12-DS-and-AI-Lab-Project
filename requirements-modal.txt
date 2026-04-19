@@ -1,3 +1,20 @@
 # Modal runtime dependencies before the CUDA llama-cpp-python build.
+#
+# Keep this self-contained. Modal's pip_install_from_requirements copies only
+# this file into the image, so nested "-r requirements-base.txt" includes are
+# not available during image build.
 
--r requirements-base.txt
+fastapi
+uvicorn[standard]
+
+huggingface_hub==1.11.0
+
+coqui-tts==0.27.5
+soundfile==0.13.1
+
+torch==2.4.0
+torchaudio==2.4.0
+
+transformers==5.5.4
+sentencepiece==0.2.1
+safetensors==0.7.0
