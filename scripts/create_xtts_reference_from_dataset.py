@@ -95,6 +95,13 @@ def _row_audio_path(row: dict[str, str], audio_files: set[str]) -> str | None:
     return None
 
 
+def _audio_only_rows(audio_files: set[str]) -> list[dict[str, str]]:
+    return [
+        {"file_name": audio_path, "text": ""}
+        for audio_path in sorted(audio_files)
+    ]
+
+
 def create_reference(args: argparse.Namespace) -> Path:
     api = HfApi()
     print(f"Listing files for dataset {args.dataset_id}")
@@ -106,22 +113,28 @@ def create_reference(args: argparse.Namespace) -> Path:
         raise RuntimeError(f"No audio files found in dataset {args.dataset_id}.")
 
     metadata_file = args.metadata_filename
+    rows = None
     if not metadata_file:
         metadata_matches = [path for path in files if Path(path).name == "metadata.csv"]
-        if not metadata_matches:
+        if metadata_matches:
+            metadata_file = sorted(metadata_matches)[0]
+        elif args.metadata_required:
             raise RuntimeError("Could not find metadata.csv in the dataset.")
-        metadata_file = sorted(metadata_matches)[0]
+        else:
+            print("No metadata.csv found; scanning audio files directly.")
+            rows = _audio_only_rows(audio_files)
 
-    metadata_path = Path(
-        hf_hub_download(
-            repo_id=args.dataset_id,
-            repo_type="dataset",
-            filename=metadata_file,
+    if rows is None:
+        metadata_path = Path(
+            hf_hub_download(
+                repo_id=args.dataset_id,
+                repo_type="dataset",
+                filename=metadata_file,
+            )
         )
-    )
-    rows = _metadata_rows(metadata_path)
+        rows = _metadata_rows(metadata_path)
     if not rows:
-        raise RuntimeError(f"No rows found in {metadata_file}.")
+        raise RuntimeError(f"No rows found in {metadata_file or 'audio file list'}.")
 
     candidates = []
     skipped_missing_audio = 0
@@ -131,7 +144,7 @@ def create_reference(args: argparse.Namespace) -> Path:
             skipped_missing_audio += 1
             continue
         text_len = _row_text_length(row, args.text_column)
-        if text_len < args.min_text_chars:
+        if text_len and text_len < args.min_text_chars:
             continue
         candidates.append((_score_row(row, args.text_column), row, audio_path))
 
@@ -221,6 +234,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset-id", default="ankitdhiman/haryanvi-tts")
     parser.add_argument("--metadata-filename", default=None)
+    parser.add_argument("--metadata-required", action="store_true")
     parser.add_argument("--text-column", default="text")
     parser.add_argument("--min-seconds", type=float, default=8.0)
     parser.add_argument("--max-seconds", type=float, default=13.0)
