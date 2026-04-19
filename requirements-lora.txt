@@ -4,7 +4,7 @@
 # requirements.txt to reduce build time and avoid bitsandbytes/CUDA failures when
 # the PEFT backend is not used.
 
--r requirements.txt
+-r requirements-base.txt
 
 accelerate==1.13.0
 bitsandbytes

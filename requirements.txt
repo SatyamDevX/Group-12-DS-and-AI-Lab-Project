@@ -1,27 +1,10 @@
-# Runtime dependencies for the deployed FastAPI app.
+# Local/Docker runtime dependencies.
 #
-# Keep this file to direct dependencies only. Transitive packages and CUDA
-# support libraries should be resolved by pip/torch for the target platform.
+# Modal uses requirements-modal.txt because llama-cpp-python needs a custom
+# CUDA build step there.
 
-fastapi
-uvicorn[standard]
+-r requirements-base.txt
 
-# Model artifact downloads from Hugging Face.
-huggingface_hub==1.11.0
-
-# GGUF inference. Modal rebuilds this package with CUDA support in modal_app.py.
+# GGUF inference. For local CPU/Docker installs, pip builds or installs the
+# default llama-cpp-python wheel. Modal installs this separately with CUDA flags.
 llama-cpp-python
-
-# TTS inference.
-coqui-tts==0.27.5
-soundfile==0.13.1
-
-# Torch runtime used by Coqui TTS and device checks.
-torch==2.4.0
-torchaudio==2.4.0
-
-# Required by app/main.py for the Coqui compatibility monkey patch and by
-# optional XTTS/model-loading code paths.
-transformers==5.5.4
-sentencepiece==0.2.1
-safetensors==0.7.0

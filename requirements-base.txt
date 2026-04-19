@@ -1,0 +1,24 @@
+# Shared runtime dependencies for the deployed FastAPI app.
+#
+# Keep this file to direct dependencies only. Transitive packages and CUDA
+# support libraries should be resolved by pip/torch for the target platform.
+
+fastapi
+uvicorn[standard]
+
+# Model artifact downloads from Hugging Face.
+huggingface_hub==1.11.0
+
+# TTS inference.
+coqui-tts==0.27.5
+soundfile==0.13.1
+
+# Torch runtime used by Coqui TTS and device checks.
+torch==2.4.0
+torchaudio==2.4.0
+
+# Required by app/main.py for the Coqui compatibility monkey patch and by
+# optional XTTS/model-loading code paths.
+transformers==5.5.4
+sentencepiece==0.2.1
+safetensors==0.7.0

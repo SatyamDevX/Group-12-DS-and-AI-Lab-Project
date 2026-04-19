@@ -39,6 +39,8 @@ image = (
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONUNBUFFERED": "1",
             "PIP_NO_CACHE_DIR": "1",
+            "CC": "gcc",
+            "CXX": "g++",
             "HF_HOME": HF_CACHE_PATH,
             "HUGGINGFACE_HUB_CACHE": f"{HF_CACHE_PATH}/hub",
             "TRANSFORMERS_CACHE": f"{HF_CACHE_PATH}/transformers",
@@ -51,10 +53,10 @@ image = (
         }
     )
     .pip_install("modal")
-    .pip_install_from_requirements("requirements.txt")
-    # Rebuild llama-cpp-python with CUDA support so GGUF layers can run on GPU.
+    .pip_install_from_requirements("requirements-modal.txt")
+    # Install llama-cpp-python once with CUDA support so GGUF layers can run on GPU.
     .run_commands(
-        'CMAKE_ARGS="-DGGML_CUDA=on" FORCE_CMAKE=1 '
+        'CC=gcc CXX=g++ CMAKE_ARGS="-DGGML_CUDA=on" FORCE_CMAKE=1 '
         "python -m pip install --force-reinstall --no-cache-dir llama-cpp-python"
     )
     .add_local_dir("app", remote_path="/root/app/app")
