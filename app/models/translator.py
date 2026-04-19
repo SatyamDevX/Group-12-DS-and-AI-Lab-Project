@@ -271,14 +271,12 @@ def _load_hf_lora_llm() -> Any:
     return _load_hf_lora_model(
         base_model_id=ModelConfig.LLM_HF_BASE_MODEL_ID,
         adapter_id=_resolve_adapter_id(),
-        merge_on_gpu=True,
     )
 
 
 def _load_hf_lora_model(
     base_model_id: str,
     adapter_id: str | None,
-    merge_on_gpu: bool = False,
 ) -> Any:
     import torch
     from peft import PeftModel
@@ -314,9 +312,6 @@ def _load_hf_lora_model(
     if adapter_id:
         logger.info("Applying LoRA adapter: %s", adapter_id)
         model = PeftModel.from_pretrained(model, adapter_id)
-        if has_gpu and merge_on_gpu:
-            model = model.merge_and_unload()
-            logger.info("Merged LoRA adapter into base model")
     else:
         logger.warning("No LoRA adapter configured; using base model only.")
 

@@ -136,6 +136,8 @@ system prompt plus the raw Hindi sentence as the user message.
 The deployment pins `transformers==4.57.6` to avoid the Transformers 5 /
 Torch 2.4 `set_submodule` mismatch, and uses `peft==0.18.0` because the
 Satyam adapter config includes the newer `alora_invocation_tokens` field.
+This adapter is loaded without merging because aLoRA adapters cannot be merged
+into the base model.
 
 After you fine-tune XTTS-v2 and upload it, switch the TTS settings to:
 
