@@ -107,6 +107,23 @@ modal secret create hindi-haryanvi-secrets \
   LLM_GGUF_CHAT_FORMAT=gemma \
   LLM_GGUF_N_GPU_LAYERS=-1 \
   LLM_MAX_NEW_TOKENS=64 \
+  TTS_BACKEND=vits \
+  TTS_REPO_ID=your-org/haryanvi-vits \
+  TTS_CHECKPOINT_FILENAME=best_model_16731.pth \
+  TTS_CONFIG_FILENAME=config.json
+```
+
+After you fine-tune XTTS-v2 and upload it, switch the TTS settings to:
+
+```bash
+modal secret create hindi-haryanvi-secrets \
+  HF_TOKEN=hf_xxx \
+  LLM_BACKEND=gguf \
+  LLM_GGUF_REPO_ID=your-org/hindi-haryanvi-gguf \
+  LLM_GGUF_FILENAME=your-model.Q4_K_S.gguf \
+  LLM_GGUF_CHAT_FORMAT=gemma \
+  LLM_GGUF_N_GPU_LAYERS=-1 \
+  LLM_MAX_NEW_TOKENS=64 \
   TTS_BACKEND=xtts \
   XTTS_REPO_ID=your-org/haryanvi-xtts-v2 \
   XTTS_CHECKPOINT_FILENAME=model.pth \
@@ -116,6 +133,24 @@ modal secret create hindi-haryanvi-secrets \
   XTTS_LANGUAGE=hi \
   COQUI_TOS_AGREED=1
 ```
+
+To upload the current local GGUF and VITS files to Hugging Face:
+
+```bash
+export HF_TOKEN=hf_xxx
+python scripts/upload_current_models_to_hf.py
+```
+
+The script uploads:
+
+```text
+model_weights/llm/base/gemma-4-E4B-it-Q4_K_S.gguf
+model_weights/tts/best_model_16731.pth
+model_weights/tts/config.json
+```
+
+Set `HF_NAMESPACE`, `LLM_GGUF_REPO_ID`, `TTS_REPO_ID`, or `HF_PRIVATE=true` if
+you want custom repo names or private repos.
 
 Deploy:
 

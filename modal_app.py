@@ -46,7 +46,7 @@ image = (
             "DEVICE": "cuda",
             "LLM_BACKEND": "gguf",
             "LLM_GGUF_N_GPU_LAYERS": "-1",
-            "TTS_BACKEND": "xtts",
+            "TTS_BACKEND": "vits",
             "XTTS_LANGUAGE": "hi",
         }
     )
