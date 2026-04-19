@@ -278,6 +278,7 @@ def _load_xtts(use_gpu: bool) -> LoadedTTS:
 
     if ModelConfig.XTTS_LOADER not in {"api", "native"}:
         raise ValueError("XTTS_LOADER must be one of: api, native")
+    xtts_loader = ModelConfig.XTTS_LOADER
 
     explicit_xtts_repo = bool(os.getenv("XTTS_REPO_ID"))
     if ModelConfig.XTTS_MODEL_NAME and not (
@@ -297,8 +298,14 @@ def _load_xtts(use_gpu: bool) -> LoadedTTS:
         vocab = artifacts["vocab"]
         speakers = artifacts["speakers"]
         logger.info("Loading XTTS checkpoint from %s", checkpoint)
+        if xtts_loader == "api":
+            logger.info(
+                "XTTS_LOADER=api was requested with a checkpoint file; using "
+                "native checkpoint_path loading instead."
+            )
+            xtts_loader = "native"
 
-        if ModelConfig.XTTS_LOADER == "api":
+        if xtts_loader == "api":
             model = TTS(
                 model_path=str(checkpoint),
                 config_path=str(config),

@@ -53,7 +53,7 @@ image = (
             "TTS_BACKEND": "vits",
             "TTS_MODELS": "vits,xtts",
             "DEFAULT_TTS_MODEL": "vits",
-            "XTTS_LOADER": "api",
+            "XTTS_LOADER": "native",
             "XTTS_LANGUAGE": "hi",
         }
     )

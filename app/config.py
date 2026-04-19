@@ -109,9 +109,9 @@ class ModelConfig:
 
     # ── Coqui XTTS-v2 TTS ───────────────────────────────────────────────────────
     # XTTS_LOADER:
-    #   api    -> Coqui TTS API loader. Good for stock XTTS and most checkpoints.
-    #   native -> Direct Xtts loader. Useful for fine-tuned XTTS-v2 artifacts.
-    XTTS_LOADER: str = os.getenv("XTTS_LOADER", "api").lower()
+    #   api    -> Coqui TTS API loader. Use with XTTS_MODEL_NAME.
+    #   native -> Direct Xtts loader. Use for HF/local XTTS-v2 checkpoint files.
+    XTTS_LOADER: str = os.getenv("XTTS_LOADER", "native").lower()
     XTTS_MODEL_NAME: str | None = os.getenv("XTTS_MODEL_NAME")
     XTTS_MODEL_DIR: Path | None = (
         Path(os.environ["XTTS_MODEL_DIR"]) if os.getenv("XTTS_MODEL_DIR") else None

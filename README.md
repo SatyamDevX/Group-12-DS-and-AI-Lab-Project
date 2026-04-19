@@ -34,7 +34,7 @@ LLM_GGUF_FILENAME=gemma-4-E4B-it-Q4_K_S.gguf
 TTS_BACKEND=xtts
 TTS_MODELS=vits,xtts
 DEFAULT_TTS_MODEL=xtts
-XTTS_LOADER=api
+XTTS_LOADER=native
 XTTS_REPO_ID=coqui/XTTS-v2
 XTTS_CHECKPOINT_FILENAME=model.pth
 XTTS_CONFIG_FILENAME=config.json
@@ -174,7 +174,7 @@ modal secret create hindi-haryanvi-secrets \
   TTS_BACKEND=xtts \
   TTS_MODELS=vits,xtts \
   DEFAULT_TTS_MODEL=xtts \
-  XTTS_LOADER=api \
+  XTTS_LOADER=native \
   XTTS_REPO_ID=coqui/XTTS-v2 \
   XTTS_CHECKPOINT_FILENAME=model.pth \
   XTTS_CONFIG_FILENAME=config.json \
@@ -196,11 +196,13 @@ XTTS_REPO_ID=your-org/haryanvi-xtts-v2
 XTTS_SPEAKER_WAV_FILENAME=reference.wav
 ```
 
-If the generic Coqui loader cannot open your fine-tuned XTTS-v2 repo, keep the
-same model files and change only:
+For `XTTS_REPO_ID` checkpoint files, `native` is the correct loader because it
+uses `checkpoint_path=...`. If you use Coqui's built-in model name instead,
+change only:
 
 ```bash
-XTTS_LOADER=native
+XTTS_LOADER=api
+XTTS_MODEL_NAME=tts_models/multilingual/multi-dataset/xtts_v2
 ```
 
 To upload the current local GGUF and VITS files to Hugging Face:
@@ -320,7 +322,7 @@ For a college project demo, you can use stock XTTS-v2 from Hugging Face first:
 ```bash
 export HF_TOKEN=hf_xxx
 export TTS_BACKEND=xtts
-export XTTS_LOADER=api
+export XTTS_LOADER=native
 export XTTS_REPO_ID=coqui/XTTS-v2
 export XTTS_CHECKPOINT_FILENAME=model.pth
 export XTTS_CONFIG_FILENAME=config.json
@@ -400,7 +402,7 @@ export LLM_TEMPERATURE=0.1
 export TTS_BACKEND=xtts             # vits or xtts
 export TTS_MODELS=vits,xtts         # frontend/API speech choices
 export DEFAULT_TTS_MODEL=xtts
-export XTTS_LOADER=api              # api or native
+export XTTS_LOADER=native           # native for HF files, api for XTTS_MODEL_NAME
 export TMP_AUDIO_DIR=/tmp/audio_outputs
 export TMP_AUDIO_MAX_AGE_SECONDS=3600
 ```
