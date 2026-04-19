@@ -25,7 +25,13 @@ from starlette.background import BackgroundTask
 
 from app.config import ModelConfig
 
-from app.models.translator import translate, load_llm, load_tokenizer
+from app.models.translator import (
+    available_translation_models,
+    default_translation_model,
+    load_translator,
+    normalize_translation_model,
+    translate_with_translator,
+)
 from app.models.tts_model import load_tts, synthesize
 
 logging.basicConfig(
@@ -34,10 +40,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-_tokenizer = _llm = _tts = None
+_translators = {}
+_translator_locks = {}
+_tts = None
 _models_ready = False
 _loading_error = None
-_llm_lock = threading.Lock()
+_translator_registry_lock = threading.Lock()
 _tts_lock = threading.Lock()
 
 
@@ -48,11 +56,12 @@ def _load_models_background():
     handlers use locks around inference because these model runtimes are not
     guaranteed to be thread-safe.
     """
-    global _tokenizer, _llm, _tts, _models_ready, _loading_error
+    global _tts, _models_ready, _loading_error
     try:
         logger.info("=== Background model loading started ===")
-        _tokenizer = load_tokenizer()
-        _llm = load_llm()
+        default_key = default_translation_model()
+        _translators[default_key] = load_translator(default_key)
+        _translator_locks[default_key] = threading.Lock()
         _tts = load_tts()
         ModelConfig.TMP_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
         _models_ready = True
@@ -99,9 +108,20 @@ def _cleanup_old_audio():
             logger.warning("Failed to clean temp audio file: %s", path, exc_info=True)
 
 
-def _translate_locked(text: str) -> str:
-    with _llm_lock:
-        return translate(text, _llm, _tokenizer)
+def _get_translator(model_key: str | None):
+    key = normalize_translation_model(model_key)
+    with _translator_registry_lock:
+        if key not in _translators:
+            logger.info("Lazy loading translation model: %s", key)
+            _translators[key] = load_translator(key)
+            _translator_locks[key] = threading.Lock()
+        return key, _translators[key], _translator_locks[key]
+
+
+def _translate_locked(text: str, model_key: str | None = None) -> tuple[str, str]:
+    key, translator, lock = _get_translator(model_key)
+    with lock:
+        return translate_with_translator(text, translator), key
 
 
 def _synthesize_locked(text: str, output_path: str) -> str:
@@ -113,6 +133,7 @@ def _synthesize_locked(text: str, output_path: str) -> str:
 
 class TextIn(BaseModel):
     text: str
+    translation_model: str | None = None
 
 # ADDED: separate request model for TTS-only endpoint
 # Accepts Haryanvi text directly so you can test TTS without going through translation
@@ -134,7 +155,9 @@ async def health(response: Response):
     return {
         "status": "error" if _loading_error else "ok" if _models_ready else "loading",
         "models_ready": _models_ready,
-        "llm_backend": ModelConfig.LLM_BACKEND,
+        "default_translation_model": default_translation_model(),
+        "available_translation_models": available_translation_models(),
+        "loaded_translation_models": sorted(_translators.keys()),
         "tts_backend": ModelConfig.TTS_BACKEND,
         "error": _loading_error,
     }
@@ -158,8 +181,10 @@ async def translate_endpoint(req: TextIn):
         raise HTTPException(400, "Input text is empty.")
     loop = asyncio.get_running_loop()
 
-    haryanvi = await loop.run_in_executor(None, _translate_locked, req.text)
-    return {"hindi": req.text, "haryanvi": haryanvi}
+    haryanvi, model_key = await loop.run_in_executor(
+        None, _translate_locked, req.text, req.translation_model
+    )
+    return {"hindi": req.text, "haryanvi": haryanvi, "translation_model": model_key}
 
 
 # ── TTS only ───────────────────────────────────────────────────────────────────
@@ -238,7 +263,9 @@ async def pipeline(req: TextIn):
         raise HTTPException(400, "Input text is empty.")
     loop = asyncio.get_running_loop()
 
-    haryanvi = await loop.run_in_executor(None, _translate_locked, req.text)
+    haryanvi, model_key = await loop.run_in_executor(
+        None, _translate_locked, req.text, req.translation_model
+    )
 
     _cleanup_old_audio()
     audio_id = str(uuid.uuid4())
@@ -248,6 +275,7 @@ async def pipeline(req: TextIn):
     return {
         "hindi": req.text,
         "haryanvi": haryanvi,
+        "translation_model": model_key,
         "audio_id": audio_id,
         "audio_url": f"/api/audio/{audio_id}",
     }
@@ -271,7 +299,9 @@ async def pipeline_base64(req: TextIn):
         raise HTTPException(400, "Input text is empty.")
     loop = asyncio.get_running_loop()
 
-    haryanvi = await loop.run_in_executor(None, _translate_locked, req.text)
+    haryanvi, model_key = await loop.run_in_executor(
+        None, _translate_locked, req.text, req.translation_model
+    )
     _cleanup_old_audio()
     audio_id = str(uuid.uuid4())
     path = ModelConfig.TMP_AUDIO_DIR / f"{audio_id}.wav"
@@ -286,6 +316,7 @@ async def pipeline_base64(req: TextIn):
     return {
         "hindi": req.text,
         "haryanvi": haryanvi,
+        "translation_model": model_key,
         "audio_base64": audio_b64,
         "sample_rate": sr,
     }

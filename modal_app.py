@@ -47,6 +47,8 @@ image = (
             "TMP_AUDIO_DIR": "/tmp/audio_outputs",
             "DEVICE": "cuda",
             "LLM_BACKEND": "gguf",
+            "TRANSLATION_MODELS": "gemma_gguf,llama_lora",
+            "DEFAULT_TRANSLATION_MODEL": "gemma_gguf",
             "LLM_GGUF_N_GPU_LAYERS": "-1",
             "TTS_BACKEND": "vits",
             "XTTS_LANGUAGE": "hi",

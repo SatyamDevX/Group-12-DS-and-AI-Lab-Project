@@ -103,23 +103,40 @@ Create the Modal secret used by `modal_app.py`:
 ```bash
 modal secret create hindi-haryanvi-secrets \
   HF_TOKEN=hf_xxx \
+  TRANSLATION_MODELS=gemma_gguf,llama_lora \
+  DEFAULT_TRANSLATION_MODEL=gemma_gguf \
   LLM_BACKEND=gguf \
   LLM_GGUF_REPO_ID=your-org/hindi-haryanvi-gguf \
   LLM_GGUF_FILENAME=your-model.Q4_K_S.gguf \
   LLM_GGUF_CHAT_FORMAT=gemma \
   LLM_GGUF_N_GPU_LAYERS=-1 \
   LLM_MAX_NEW_TOKENS=64 \
+  LLM_LORA_BASE_MODEL_ID=meta-llama/Meta-Llama-3.1-8B-Instruct \
+  LLM_LORA_ADAPTER_ID=Satyam-Srivastava/hindi-to-haryanvi-translation-llama3-qlora \
   TTS_BACKEND=vits \
   TTS_REPO_ID=your-org/haryanvi-vits \
   TTS_CHECKPOINT_FILENAME=best_model_16731.pth \
   TTS_CONFIG_FILENAME=config.json
 ```
 
+The frontend includes a translation model dropdown:
+
+```text
+gemma_gguf -> your uploaded Gemma GGUF model
+llama_lora -> meta-llama/Meta-Llama-3.1-8B-Instruct + Satyam-Srivastava adapter
+```
+
+The LoRA option is loaded lazily on first use. Because the base LLaMA model is
+gated, add `HF_TOKEN` to the Modal secret and make sure the token has access to
+`meta-llama/Meta-Llama-3.1-8B-Instruct`.
+
 After you fine-tune XTTS-v2 and upload it, switch the TTS settings to:
 
 ```bash
 modal secret create hindi-haryanvi-secrets \
   HF_TOKEN=hf_xxx \
+  TRANSLATION_MODELS=gemma_gguf,llama_lora \
+  DEFAULT_TRANSLATION_MODEL=gemma_gguf \
   LLM_BACKEND=gguf \
   LLM_GGUF_REPO_ID=your-org/hindi-haryanvi-gguf \
   LLM_GGUF_FILENAME=your-model.Q4_K_S.gguf \

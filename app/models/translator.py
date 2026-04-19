@@ -5,6 +5,7 @@ Supported backends:
   LLM_BACKEND=gguf    -> llama-cpp loads a GGUF from local disk or Hugging Face.
   LLM_BACKEND=hf_lora -> Transformers loads a HF/local base model plus LoRA.
 """
+from dataclasses import dataclass
 import logging
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,33 @@ from typing import Any
 from app.config import ModelConfig
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class LoadedTranslator:
+    key: str
+    label: str
+    backend: str
+    model: Any
+    tokenizer: Any = None
+    prompt_template: str | None = None
+
+
+TRANSLATION_MODEL_LABELS = {
+    "gemma_gguf": "Gemma 4 GGUF",
+    "llama_lora": "LLaMA 3.1 QLoRA",
+}
+
+TRANSLATION_MODEL_ALIASES = {
+    "gemma": "gemma_gguf",
+    "gguf": "gemma_gguf",
+    "gemma_gguf": "gemma_gguf",
+    "llama": "llama_lora",
+    "lora": "llama_lora",
+    "llama_lora": "llama_lora",
+    "llama3_lora": "llama_lora",
+    "satyam_lora": "llama_lora",
+}
 
 
 SYSTEM_PROMPT = """तुम एक हरियाणवी भाषा विशेषज्ञ अनुवादक हो। तुम्हारा काम है हिंदी वाक्यों को असली हरियाणवी बोली में बदलना।
@@ -87,6 +115,75 @@ def _backend() -> str:
     return backend
 
 
+def normalize_translation_model(model_key: str | None = None) -> str:
+    key = (model_key or ModelConfig.DEFAULT_TRANSLATION_MODEL).strip().lower()
+    normalized = TRANSLATION_MODEL_ALIASES.get(key)
+    if not normalized:
+        raise ValueError(
+            "translation_model must be one of: "
+            + ", ".join(sorted(TRANSLATION_MODEL_LABELS))
+        )
+    return normalized
+
+
+def available_translation_models() -> list[dict[str, str]]:
+    keys = []
+    for raw_key in ModelConfig.TRANSLATION_MODELS.split(","):
+        raw_key = raw_key.strip()
+        if not raw_key:
+            continue
+        key = normalize_translation_model(raw_key)
+        if key not in keys:
+            keys.append(key)
+
+    if not keys:
+        keys = [normalize_translation_model(ModelConfig.DEFAULT_TRANSLATION_MODEL)]
+
+    return [{"key": key, "label": TRANSLATION_MODEL_LABELS[key]} for key in keys]
+
+
+def default_translation_model() -> str:
+    default = normalize_translation_model(ModelConfig.DEFAULT_TRANSLATION_MODEL)
+    configured = {item["key"] for item in available_translation_models()}
+    if default not in configured:
+        raise ValueError(
+            f"DEFAULT_TRANSLATION_MODEL={default} is not present in TRANSLATION_MODELS."
+        )
+    return default
+
+
+def load_translator(model_key: str | None = None) -> LoadedTranslator:
+    key = normalize_translation_model(model_key)
+    configured = {item["key"] for item in available_translation_models()}
+    if key not in configured:
+        raise ValueError(
+            f"Translation model '{key}' is not enabled. Set TRANSLATION_MODELS to include it."
+        )
+
+    if key == "gemma_gguf":
+        model = _load_gguf_llm()
+        return LoadedTranslator(
+            key=key,
+            label=TRANSLATION_MODEL_LABELS[key],
+            backend="gguf",
+            model=model,
+        )
+
+    tokenizer = _load_hf_tokenizer(ModelConfig.LLM_LORA_BASE_MODEL_ID)
+    model = _load_hf_lora_model(
+        base_model_id=ModelConfig.LLM_LORA_BASE_MODEL_ID,
+        adapter_id=ModelConfig.LLM_LORA_ADAPTER_ID,
+    )
+    return LoadedTranslator(
+        key=key,
+        label=TRANSLATION_MODEL_LABELS[key],
+        backend="hf_lora",
+        model=model,
+        tokenizer=tokenizer,
+        prompt_template=ModelConfig.LLM_LORA_PROMPT_TEMPLATE,
+    )
+
+
 def _resolve_gguf_path() -> Path:
     if ModelConfig.LLM_GGUF_MODEL_PATH:
         path = ModelConfig.LLM_GGUF_MODEL_PATH
@@ -133,9 +230,13 @@ def load_tokenizer() -> Any:
     if _backend() == "gguf":
         return None
 
+    return _load_hf_tokenizer(ModelConfig.LLM_HF_BASE_MODEL_ID)
+
+
+def _load_hf_tokenizer(base_model_id: str) -> Any:
     from transformers import AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(ModelConfig.LLM_HF_BASE_MODEL_ID)
+    tokenizer = AutoTokenizer.from_pretrained(base_model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
@@ -166,12 +267,24 @@ def _load_gguf_llm() -> Any:
 
 
 def _load_hf_lora_llm() -> Any:
+    return _load_hf_lora_model(
+        base_model_id=ModelConfig.LLM_HF_BASE_MODEL_ID,
+        adapter_id=_resolve_adapter_id(),
+        merge_on_gpu=True,
+    )
+
+
+def _load_hf_lora_model(
+    base_model_id: str,
+    adapter_id: str | None,
+    merge_on_gpu: bool = False,
+) -> Any:
     import torch
     from peft import PeftModel
     from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 
     has_gpu = _has_cuda()
-    logger.info("Loading HF base LLM: %s", ModelConfig.LLM_HF_BASE_MODEL_ID)
+    logger.info("Loading HF base LLM: %s", base_model_id)
 
     if ModelConfig.LLM_LOAD_IN_4BIT and has_gpu:
         kwargs = dict(
@@ -193,15 +306,14 @@ def _load_hf_lora_llm() -> Any:
         logger.warning("Loading HF model on CPU; inference may be very slow.")
 
     model = AutoModelForCausalLM.from_pretrained(
-        ModelConfig.LLM_HF_BASE_MODEL_ID,
+        base_model_id,
         **kwargs,
     )
 
-    adapter_id = _resolve_adapter_id()
     if adapter_id:
         logger.info("Applying LoRA adapter: %s", adapter_id)
         model = PeftModel.from_pretrained(model, adapter_id)
-        if has_gpu:
+        if has_gpu and merge_on_gpu:
             model = model.merge_and_unload()
             logger.info("Merged LoRA adapter into base model")
     else:
@@ -227,6 +339,17 @@ def translate(text: str, model: Any, tokenizer: Any) -> str:
     return _translate_hf_lora(text, model, tokenizer)
 
 
+def translate_with_translator(text: str, translator: LoadedTranslator) -> str:
+    if translator.backend == "gguf":
+        return _translate_gguf(text, translator.model)
+    return _translate_hf_lora(
+        text,
+        translator.model,
+        translator.tokenizer,
+        prompt_template=translator.prompt_template,
+    )
+
+
 def _translate_gguf(text: str, model: Any) -> str:
     response = model.create_chat_completion(
         messages=[
@@ -247,13 +370,18 @@ def _translate_gguf(text: str, model: Any) -> str:
     return _clean_output(result)
 
 
-def _translate_hf_lora(text: str, model: Any, tokenizer: Any) -> str:
+def _translate_hf_lora(
+    text: str,
+    model: Any,
+    tokenizer: Any,
+    prompt_template: str | None = None,
+) -> str:
     if tokenizer is None:
         raise RuntimeError("Tokenizer is required for LLM_BACKEND=hf_lora")
 
     import torch
 
-    prompt = ModelConfig.LLM_PROMPT_TEMPLATE.format(text=text.strip())
+    prompt = (prompt_template or ModelConfig.LLM_PROMPT_TEMPLATE).format(text=text.strip())
     device = next(model.parameters()).device
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
     gen_kwargs = dict(

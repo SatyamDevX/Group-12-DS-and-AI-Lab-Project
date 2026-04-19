@@ -15,6 +15,17 @@ def _float_env(key: str, default: str) -> float:
 
 
 class ModelConfig:
+    # Comma-separated translation models exposed by the API/frontend.
+    # Supported keys:
+    #   gemma_gguf  -> current Gemma GGUF model.
+    #   llama_lora  -> LLaMA 3.1 base + Satyam-Srivastava LoRA adapter.
+    TRANSLATION_MODELS: str = os.getenv(
+        "TRANSLATION_MODELS", "gemma_gguf,llama_lora"
+    )
+    DEFAULT_TRANSLATION_MODEL: str = os.getenv(
+        "DEFAULT_TRANSLATION_MODEL", "gemma_gguf"
+    )
+
     # LLM_BACKEND:
     #   gguf    -> llama-cpp loads a GGUF file from local disk or Hugging Face.
     #   hf_lora -> Transformers loads a base model and optional PEFT/LoRA adapter.
@@ -48,6 +59,19 @@ class ModelConfig:
     )
     LLM_HF_ADAPTER_ID: str | None = os.getenv("LLM_HF_ADAPTER_ID")
     LLM_USE_LOCAL_ADAPTER: bool = _bool_env("LLM_USE_LOCAL_ADAPTER", "true")
+
+    # Named LoRA profile used by TRANSLATION_MODELS=llama_lora.
+    LLM_LORA_BASE_MODEL_ID: str = os.getenv(
+        "LLM_LORA_BASE_MODEL_ID", "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    )
+    LLM_LORA_ADAPTER_ID: str = os.getenv(
+        "LLM_LORA_ADAPTER_ID",
+        "Satyam-Srivastava/hindi-to-haryanvi-translation-llama3-qlora",
+    )
+    LLM_LORA_PROMPT_TEMPLATE: str = os.getenv(
+        "LLM_LORA_PROMPT_TEMPLATE",
+        "Translate Hindi to Haryanvi: {text}",
+    )
 
     LLM_PROMPT_TEMPLATE: str = os.getenv(
         "LLM_PROMPT_TEMPLATE",

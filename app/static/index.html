@@ -80,7 +80,7 @@
       padding: var(--space-6) var(--space-4);
     }
     button { cursor: pointer; border: none; background: none; font: inherit; color: inherit; }
-    textarea, input { font: inherit; color: inherit; }
+    textarea, input, select { font: inherit; color: inherit; }
     img, svg { display: block; max-width: 100%; }
     :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: var(--radius-sm); }
 
@@ -306,6 +306,25 @@
     }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+    .model-select-row {
+      width: 100%; max-width: 820px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--space-3); margin-bottom: var(--space-4);
+    }
+    .model-select-row label {
+      font-size: var(--text-xs); font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .model-select {
+      min-width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--space-2) var(--space-3);
+      color: var(--text);
+    }
+
     /* ADDED: inline loading skeleton for result areas */
     @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
     .skeleton {
@@ -327,7 +346,8 @@
       body { padding: var(--space-4) var(--space-3); }
       .card { padding: var(--space-4); }
       .steps { flex-wrap: wrap; }
-      .btn-row { flex-direction: column; }
+      .btn-row, .model-select-row { flex-direction: column; align-items: stretch; }
+      .model-select { width: 100%; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -346,8 +366,7 @@
     </svg>
     <div>
       <div class="logo-title">Hindi → Haryanvi</div>
-      <!-- CHANGED: updated subtitle to reflect Gemma 4 instead of LLaMA 3.1 -->
-      <div class="logo-sub">Gemma 4 E4B + Coqui VITS TTS Pipeline</div>
+      <div class="logo-sub">Selectable Translation + Coqui VITS TTS Pipeline</div>
     </div>
   </div>
   <button class="theme-btn" data-theme-toggle aria-label="Switch to light mode">
@@ -368,9 +387,17 @@
 <main>
 
   <!-- ADDED: model badge showing active model -->
-  <div class="model-badge">
+  <div class="model-badge" id="model-badge">
     <span class="pulse"></span>
-    Gemma 4 E4B · Haryanvi Dialect Translation
+    <span id="model-badge-text">Gemma 4 GGUF · Haryanvi Dialect Translation</span>
+  </div>
+
+  <div class="model-select-row">
+    <label for="translation-model">Translation model</label>
+    <select class="model-select" id="translation-model">
+      <option value="gemma_gguf" selected>Gemma 4 GGUF</option>
+      <option value="llama_lora">LLaMA 3.1 QLoRA adapter</option>
+    </select>
   </div>
 
   <!-- Input card -->
@@ -475,8 +502,7 @@
 
 </main>
 
-<!-- CHANGED: updated footer to reflect Gemma 4 -->
-<footer>Hindi → Haryanvi · Gemma 4 E4B (llama-cpp) + Coqui VITS · Powered by Haryanvi dialect prompt engineering</footer>
+<footer>Hindi → Haryanvi · Gemma 4 GGUF / LLaMA 3.1 QLoRA + Coqui VITS</footer>
 
 <script>
 (function () {
@@ -502,8 +528,22 @@
   const inputHindi      = document.getElementById('input-hindi-section');
   const inputHaryanvi   = document.getElementById('input-haryanvi-section');
   const copyTransBtn    = document.getElementById('copy-translation-btn');
+  const translationModel= document.getElementById('translation-model');
+  const modelBadgeText  = document.getElementById('model-badge-text');
 
   let currentTab = 'pipeline';
+  const modelLabels = {
+    gemma_gguf: 'Gemma 4 GGUF',
+    llama_lora: 'LLaMA 3.1 QLoRA adapter',
+  };
+
+  function selectedTranslationModel() {
+    return translationModel.value;
+  }
+
+  translationModel.addEventListener('change', () => {
+    modelBadgeText.textContent = `${modelLabels[selectedTranslationModel()]} · Haryanvi Dialect Translation`;
+  });
 
   /* ── Theme toggle ─────────────────────────────────────────────────────── */
   const html = document.documentElement;
@@ -622,7 +662,7 @@
     try {
       const res = await fetch('/api/pipeline', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, translation_model: selectedTranslationModel() }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || 'Pipeline failed.'); }
       const data = await res.json();
@@ -657,7 +697,7 @@
     try {
       const res = await fetch('/api/translate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, translation_model: selectedTranslationModel() }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || 'Translation failed.'); }
       const data = await res.json();
@@ -718,7 +758,7 @@
     try {
       const res = await fetch('/api/translate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, translation_model: selectedTranslationModel() }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || 'Translation failed.'); }
       const data = await res.json();

@@ -18,3 +18,8 @@ torchaudio==2.4.0
 transformers==5.5.4
 sentencepiece==0.2.1
 safetensors==0.7.0
+
+# Needed only when the frontend/API selects translation_model=llama_lora.
+accelerate==1.13.0
+bitsandbytes
+peft==0.19.1
