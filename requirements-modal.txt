@@ -22,4 +22,4 @@ safetensors==0.7.0
 # Needed only when the frontend/API selects translation_model=llama_lora.
 accelerate==1.13.0
 bitsandbytes
-peft==0.13.2
+peft==0.18.0

@@ -133,8 +133,9 @@ gated, add `HF_TOKEN` to the Modal secret and make sure the token has access to
 
 The LoRA inference path uses the same chat shape from `rds_llama_finetune.ipynb`:
 system prompt plus the raw Hindi sentence as the user message.
-The deployment also pins the LoRA stack to `transformers==4.57.6` and
-`peft==0.13.2` so it stays compatible with `torch==2.4.0`.
+The deployment pins `transformers==4.57.6` to avoid the Transformers 5 /
+Torch 2.4 `set_submodule` mismatch, and uses `peft==0.18.0` because the
+Satyam adapter config includes the newer `alora_invocation_tokens` field.
 
 After you fine-tune XTTS-v2 and upload it, switch the TTS settings to:
 
