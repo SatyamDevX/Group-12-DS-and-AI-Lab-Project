@@ -25,43 +25,73 @@ def _bool_env(name: str, default: str = "false") -> bool:
 
 
 def _duration_seconds(path: Path) -> float:
-    with wave.open(str(path), "rb") as wav:
-        frames = wav.getnframes()
-        rate = wav.getframerate()
-        return frames / float(rate)
+    try:
+        with wave.open(str(path), "rb") as wav:
+            frames = wav.getnframes()
+            rate = wav.getframerate()
+            return frames / float(rate)
+    except (wave.Error, EOFError):
+        sf = _require_soundfile()
+        info = sf.info(str(path))
+        return info.frames / float(info.samplerate)
+
+
+def _require_soundfile():
+    try:
+        import soundfile as sf
+    except ImportError as exc:
+        raise RuntimeError(
+            "This audio format is not readable by Python's built-in wave module. "
+            "Install soundfile with `.venv_deploy/bin/python -m pip install soundfile` "
+            "and rerun the command."
+        ) from exc
+    return sf
 
 
 def _copy_reference(source_path: Path, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if source_path.suffix.lower() == ".wav":
-        shutil.copyfile(source_path, output_path)
-        return
+        try:
+            with wave.open(str(source_path), "rb"):
+                shutil.copyfile(source_path, output_path)
+                return
+        except (wave.Error, EOFError):
+            pass
 
-    try:
-        import soundfile as sf
-    except ImportError as exc:
-        raise RuntimeError(
-            f"Selected audio is {source_path.suffix}, not WAV. Install soundfile "
-            "or select a WAV-only dataset/file."
-        ) from exc
+    sf = _require_soundfile()
 
     audio, sample_rate = sf.read(source_path)
-    sf.write(output_path, audio, sample_rate)
+    sf.write(output_path, audio, sample_rate, format="WAV")
 
 
 def _trim_wav(source_path: Path, output_path: Path, start_seconds: float, seconds: float) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with wave.open(str(source_path), "rb") as src:
-        params = src.getparams()
-        sample_rate = src.getframerate()
-        start_frame = int(start_seconds * sample_rate)
-        frame_count = int(seconds * sample_rate)
-        src.setpos(min(start_frame, src.getnframes()))
-        frames = src.readframes(frame_count)
+    try:
+        with wave.open(str(source_path), "rb") as src:
+            params = src.getparams()
+            sample_rate = src.getframerate()
+            start_frame = int(start_seconds * sample_rate)
+            frame_count = int(seconds * sample_rate)
+            src.setpos(min(start_frame, src.getnframes()))
+            frames = src.readframes(frame_count)
 
-    with wave.open(str(output_path), "wb") as dst:
-        dst.setparams(params)
-        dst.writeframes(frames)
+        with wave.open(str(output_path), "wb") as dst:
+            dst.setparams(params)
+            dst.writeframes(frames)
+        return
+    except (wave.Error, EOFError):
+        pass
+
+    sf = _require_soundfile()
+    info = sf.info(str(source_path))
+    start_frame = int(start_seconds * info.samplerate)
+    frame_count = int(seconds * info.samplerate)
+    audio, sample_rate = sf.read(
+        source_path,
+        start=start_frame,
+        frames=frame_count,
+    )
+    sf.write(output_path, audio, sample_rate, format="WAV")
 
 
 def _score_row(row: dict, text_column: str) -> tuple[int, int]:
